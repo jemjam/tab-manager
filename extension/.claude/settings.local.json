@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "WebFetch(domain:wxt.dev)",
+      "WebFetch(domain:playwright.dev)",
+      "Skill(beads)",
+      "Bash(jj status:*)",
+      "Bash(jj diff:*)"
+    ]
+  }
+}
