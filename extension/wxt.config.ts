@@ -15,5 +15,8 @@ export default defineConfig({
     binaries: {
       vivaldi: "/Applications/Vivaldi.app/Contents/MacOS/Vivaldi",
     },
+    startUrls: [],
+    chromiumProfile: ".dev-profile",
+    keepProfileChanges: true,
   },
 });

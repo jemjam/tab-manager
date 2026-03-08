@@ -13,6 +13,7 @@ stats.html
 stats-*.json
 .wxt
 web-ext.config.ts
+.dev-profile
 /test-results/
 /playwright-report/
 
