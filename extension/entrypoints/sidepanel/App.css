@@ -59,6 +59,7 @@ body {
   }
 }
 
+.copy-selected,
 .close-selected {
   border: 1px solid #ccc;
   background: none;
@@ -69,6 +70,7 @@ body {
   font-size: 12px;
 }
 
+.copy-selected:disabled,
 .close-selected:disabled {
   opacity: 0.4;
   cursor: default;
@@ -138,6 +140,7 @@ body {
   white-space: nowrap;
 }
 
+.tab-copy,
 .tab-close {
   flex-shrink: 0;
   width: 20px;
@@ -155,16 +158,19 @@ body {
   justify-content: center;
 }
 
+.tab-item:hover .tab-copy,
 .tab-item:hover .tab-close {
   opacity: 0.6;
 }
 
+.tab-copy:hover,
 .tab-close:hover {
   opacity: 1 !important;
   background: rgba(0, 0, 0, 0.1);
 }
 
 @media (prefers-color-scheme: dark) {
+  .tab-copy:hover,
   .tab-close:hover {
     background: rgba(255, 255, 255, 0.1);
   }

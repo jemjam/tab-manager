@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { browser, Browser } from "wxt/browser";
 
 const FALLBACK_ICON =
@@ -72,6 +72,39 @@ function App() {
     setSelectedTabs(new Set());
   };
 
+  const toMarkdownLink = (tab: Browser.tabs.Tab) =>
+    `[${tab.title}](${tab.url})`;
+
+  const copyLink = async (e: React.MouseEvent, tab: Browser.tabs.Tab, btn: HTMLButtonElement) => {
+    e.stopPropagation();
+    await navigator.clipboard.writeText(toMarkdownLink(tab));
+    btn.dataset.copied = "true";
+    btn.textContent = "\u2713";
+    setTimeout(() => {
+      btn.dataset.copied = "";
+      btn.textContent = "\u29C9";
+    }, 1000);
+  };
+
+  const copySelectedRef = useRef<HTMLButtonElement>(null);
+
+  const copySelected = async () => {
+    const text = tabs
+      .filter((t) => t.id != null && selectedTabs.has(t.id))
+      .map(toMarkdownLink)
+      .join("\n");
+    await navigator.clipboard.writeText(text);
+    const btn = copySelectedRef.current;
+    if (btn) {
+      btn.dataset.copied = "true";
+      btn.textContent = "\u2713 Copied";
+      setTimeout(() => {
+        btn.dataset.copied = "";
+        btn.textContent = "Copy Links";
+      }, 1000);
+    }
+  };
+
   return (
     <>
       <div className="tab-header">
@@ -81,6 +114,14 @@ function App() {
         <span className="selected-count">
           {selectedTabs.size > 0 ? `${selectedTabs.size} selected` : ""}
         </span>
+        <button
+          ref={copySelectedRef}
+          className="copy-selected"
+          disabled={selectedTabs.size === 0}
+          onClick={copySelected}
+        >
+          Copy Links
+        </button>
         <button
           className="close-selected"
           disabled={selectedTabs.size === 0}
@@ -114,6 +155,15 @@ function App() {
               }}
             />
             <span className="tab-title">{tab.title || tab.url}</span>
+            {tab.id != null && (
+              <button
+                className="tab-copy"
+                onClick={(e) => copyLink(e, tab, e.currentTarget)}
+                aria-label={`Copy link for ${tab.title}`}
+              >
+                ⧉
+              </button>
+            )}
             {tab.id != null && (
               <button
                 className="tab-close"
