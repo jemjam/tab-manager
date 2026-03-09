@@ -81,6 +81,8 @@ function App() {
 
   const toggleSelect = (e: React.MouseEvent, tabId: number) => {
     e.stopPropagation();
+    const tab = tabs.find((t) => t.id === tabId);
+    if (tab) console.log("Selected tab:", tab);
     setSelectedTabs((prev) => {
       const next = new Set(prev);
       if (next.has(tabId)) next.delete(tabId);
@@ -156,7 +158,7 @@ function App() {
       </div>
 
       <ul
-        className={clsx("flex flex-col", selectedTabs.size > 0 && "pb-12")}
+        className={clsx("flex flex-col", selectedTabs.size > 0 && "pt-12")}
       >
         {filteredTabs.map((tab) => (
           <li
@@ -222,8 +224,10 @@ function App() {
       <div
         data-bulk-bar
         className={clsx(
-          "fixed inset-x-0 bottom-0 z-20 flex items-center gap-2 border-t border-border bg-surface px-3 py-2 shadow-lg transition-transform duration-200",
-          selectedTabs.size > 0 ? "translate-y-0" : "translate-y-full",
+          "fixed inset-x-0 top-[37px] z-20 flex items-center gap-2 border-b border-border bg-surface px-3 py-2 shadow-lg transition-transform duration-200",
+          selectedTabs.size > 0
+            ? "translate-y-0 pointer-events-auto"
+            : "-translate-y-[calc(100%+37px)] pointer-events-none",
         )}
       >
         <span
