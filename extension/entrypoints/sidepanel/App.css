@@ -1,1 +1,18 @@
 @import "tailwindcss";
+
+:root {
+  color-scheme: light dark;
+}
+
+@theme {
+  --color-surface: Canvas;
+  --color-on-surface: CanvasText;
+  --color-muted: GrayText;
+  --color-border: ButtonBorder;
+  --color-accent: AccentColor;
+  --color-accent-subtle: color-mix(in srgb, AccentColor 15%, Canvas);
+  --color-accent-subtler: color-mix(in srgb, AccentColor 8%, Canvas);
+  --color-hover: color-mix(in srgb, CanvasText 6%, transparent);
+  --color-danger: light-dark(#dc2626, #f87171);
+  --color-danger-border: light-dark(#fca5a5, #991b1b);
+}
