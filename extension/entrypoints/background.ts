@@ -1,3 +1,7 @@
 export default defineBackground(() => {
-  browser.sidePanel.setPanelBehavior({ openPanelOnActionClick: true });
+  const url = browser.runtime.getURL("/tabs.html");
+
+  browser.action.onClicked.addListener(() => {
+    browser.tabs.create({ url });
+  });
 });
