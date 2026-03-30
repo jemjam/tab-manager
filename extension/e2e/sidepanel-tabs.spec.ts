@@ -1,7 +1,7 @@
 import { expect, test } from "./fixtures";
 
 test("renders a list of open tabs", async ({ page, extensionId }) => {
-  await page.goto(`chrome-extension://${extensionId}/sidepanel.html`);
+  await page.goto(`chrome-extension://${extensionId}/tabs.html`);
 
   const items = page.locator("[data-tab]");
   await expect(items.first()).toBeVisible();
@@ -13,7 +13,7 @@ test("displays tab titles", async ({ context, page, extensionId }) => {
   await newPage.goto("data:text/html,<title>Test Tab Title</title>");
   await newPage.waitForLoadState("domcontentloaded");
 
-  await page.goto(`chrome-extension://${extensionId}/sidepanel.html`);
+  await page.goto(`chrome-extension://${extensionId}/tabs.html`);
 
   await expect(page.locator("[data-tab-title]", { hasText: "Test Tab Title" })).toBeVisible();
 
@@ -25,7 +25,7 @@ test("displays tab URL below title", async ({ context, page, extensionId }) => {
   await newPage.goto("data:text/html,<title>URL Display Test</title>");
   await newPage.waitForLoadState("domcontentloaded");
 
-  await page.goto(`chrome-extension://${extensionId}/sidepanel.html`);
+  await page.goto(`chrome-extension://${extensionId}/tabs.html`);
 
   const item = page.locator("[data-tab]", { hasText: "URL Display Test" });
   await expect(item).toBeVisible();
@@ -35,66 +35,186 @@ test("displays tab URL below title", async ({ context, page, extensionId }) => {
   await newPage.close();
 });
 
-test("closes a tab via the × button", async ({ context, page, extensionId }) => {
+test("clicking a row toggles selection", async ({ context, page, extensionId }) => {
   const newPage = await context.newPage();
-  await newPage.goto("data:text/html,<title>Tab To Close</title>");
+  await newPage.goto("data:text/html,<title>Click Select Test</title>");
   await newPage.waitForLoadState("domcontentloaded");
 
-  await page.goto(`chrome-extension://${extensionId}/sidepanel.html`);
+  await page.goto(`chrome-extension://${extensionId}/tabs.html`);
 
-  const itemToClose = page.locator("[data-tab]", { hasText: "Tab To Close" });
-  await expect(itemToClose).toBeVisible();
-
-  const countBefore = await page.locator("[data-tab]").count();
-
-  await itemToClose.locator("[data-tab-close]").click();
-
-  await expect(page.locator("[data-tab]")).toHaveCount(countBefore - 1);
-  await expect(itemToClose).not.toBeVisible();
-});
-
-test("per-tab copy button visible on hover", async ({ context, page, extensionId }) => {
-  const newPage = await context.newPage();
-  await newPage.goto("data:text/html,<title>Hover Copy Test</title>");
-  await newPage.waitForLoadState("domcontentloaded");
-
-  await page.goto(`chrome-extension://${extensionId}/sidepanel.html`);
-
-  const item = page.locator("[data-tab]", { hasText: "Hover Copy Test" });
+  const item = page.locator("[data-tab]", { hasText: "Click Select Test" });
   await expect(item).toBeVisible();
 
-  const copyBtn = item.locator("[data-tab-copy]");
-  await expect(copyBtn).toHaveCSS("opacity", "0");
+  const checkbox = item.locator("[data-tab-checkbox]");
+  await expect(checkbox).not.toBeChecked();
 
-  await item.hover();
-  await expect(copyBtn).not.toHaveCSS("opacity", "0");
+  await item.click();
+  await expect(checkbox).toBeChecked();
+
+  await item.click();
+  await expect(checkbox).not.toBeChecked();
 
   await newPage.close();
 });
 
-test("per-tab copy button sets data-copied attribute", async ({ context, page, extensionId }) => {
+test("clicking a row does not activate the tab", async ({ context, page, extensionId }) => {
   const newPage = await context.newPage();
-  await newPage.goto("data:text/html,<title>Copy Me</title>");
+  await newPage.goto("data:text/html,<title>No Activate Test</title>");
   await newPage.waitForLoadState("domcontentloaded");
 
-  await page.goto(`chrome-extension://${extensionId}/sidepanel.html`);
+  await page.goto(`chrome-extension://${extensionId}/tabs.html`);
 
-  const item = page.locator("[data-tab]", { hasText: "Copy Me" });
-  await item.hover();
+  const item = page.locator("[data-tab]", { hasText: "No Activate Test" });
+  await expect(item).toBeVisible();
 
-  const copyBtn = item.locator("[data-tab-copy]");
-  await copyBtn.click();
-
-  await expect(copyBtn).toHaveAttribute("data-copied", "true");
-  await expect(copyBtn).toHaveText("\u2713");
+  // The extension tab should remain in the foreground after clicking a row
+  await item.click();
+  await expect(page.locator("[data-tab]", { hasText: "No Activate Test" })).toBeVisible();
+  // We're still on the extension page
+  expect(page.url()).toContain("tabs.html");
 
   await newPage.close();
 });
 
-test("bulk action bar hidden when nothing selected", async ({ page, extensionId }) => {
-  await page.goto(`chrome-extension://${extensionId}/sidepanel.html`);
+test("context menu opens and has three actions", async ({ context, page, extensionId }) => {
+  const newPage = await context.newPage();
+  await newPage.goto("data:text/html,<title>Menu Test</title>");
+  await newPage.waitForLoadState("domcontentloaded");
+
+  await page.goto(`chrome-extension://${extensionId}/tabs.html`);
+
+  const item = page.locator("[data-tab]", { hasText: "Menu Test" });
+  await expect(item).toBeVisible();
+
+  await item.hover();
+  await item.locator("[data-tab-menu]").click();
+
+  const menu = item.locator("[data-context-menu]");
+  await expect(menu).toBeVisible();
+  await expect(menu.locator("[data-menu-focus]")).toHaveText("Focus tab");
+  await expect(menu.locator("[data-menu-copy]")).toHaveText("Copy link");
+  await expect(menu.locator("[data-menu-close]")).toHaveText("Close tab");
+
+  await newPage.close();
+});
+
+test("context menu closes a tab", async ({ context, page, extensionId }) => {
+  const newPage = await context.newPage();
+  await newPage.goto("data:text/html,<title>Menu Close Test</title>");
+  await newPage.waitForLoadState("domcontentloaded");
+
+  await page.goto(`chrome-extension://${extensionId}/tabs.html`);
+
+  const item = page.locator("[data-tab]", { hasText: "Menu Close Test" });
+  await expect(item).toBeVisible();
+  const countBefore = await page.locator("[data-tab]").count();
+
+  await item.hover();
+  await item.locator("[data-tab-menu]").click();
+  await item.locator("[data-menu-close]").click();
+
+  await expect(page.locator("[data-tab]")).toHaveCount(countBefore - 1);
+  await expect(item).not.toBeVisible();
+});
+
+test("context menu closes on outside click", async ({ context, page, extensionId }) => {
+  const newPage = await context.newPage();
+  await newPage.goto("data:text/html,<title>Menu Outside Test</title>");
+  await newPage.waitForLoadState("domcontentloaded");
+
+  await page.goto(`chrome-extension://${extensionId}/tabs.html`);
+
+  const item = page.locator("[data-tab]", { hasText: "Menu Outside Test" });
+  await expect(item).toBeVisible();
+
+  await item.hover();
+  await item.locator("[data-tab-menu]").click();
+  await expect(item.locator("[data-context-menu]")).toBeVisible();
+
+  // Click outside the menu
+  await page.locator("[data-filter]").click();
+  await expect(item.locator("[data-context-menu]")).not.toBeVisible();
+
+  await newPage.close();
+});
+
+test("filter clear button appears and clears filter", async ({ context, page, extensionId }) => {
+  const newPage = await context.newPage();
+  await newPage.goto("data:text/html,<title>Filter Clear Test</title>");
+  await newPage.waitForLoadState("domcontentloaded");
+
+  await page.goto(`chrome-extension://${extensionId}/tabs.html`);
+
+  // Clear button not visible when filter is empty
+  await expect(page.locator("[data-filter-clear]")).not.toBeVisible();
+
+  const countAll = await page.locator("[data-tab]").count();
+  expect(countAll).toBeGreaterThan(1);
+
+  await page.locator("[data-filter]").fill("Filter Clear Test");
+  await expect(page.locator("[data-tab]")).toHaveCount(1);
+
+  // Clear button should now be visible
+  await expect(page.locator("[data-filter-clear]")).toBeVisible();
+
+  await page.locator("[data-filter-clear]").click();
+  await expect(page.locator("[data-tab]")).toHaveCount(countAll);
+  await expect(page.locator("[data-filter-clear]")).not.toBeVisible();
+
+  await newPage.close();
+});
+
+test("bulk action bar always visible, disabled when nothing selected", async ({ page, extensionId }) => {
+  await page.goto(`chrome-extension://${extensionId}/tabs.html`);
   await expect(page.locator("[data-tab]").first()).toBeVisible();
-  await expect(page.locator("[data-bulk-bar]")).not.toBeInViewport();
+
+  // Bar is visible
+  await expect(page.locator("[data-bulk-bar]")).toBeVisible();
+
+  // Buttons are disabled
+  await expect(page.locator("[data-copy-selected]")).toBeDisabled();
+  await expect(page.locator("[data-close-selected]")).toBeDisabled();
+
+  await expect(page.locator("[data-selected-count]")).toHaveText("0 selected");
+});
+
+test("bulk action bar enables when tabs selected", async ({ context, page, extensionId }) => {
+  const newPage = await context.newPage();
+  await newPage.goto("data:text/html,<title>Bar Enable Test</title>");
+  await newPage.waitForLoadState("domcontentloaded");
+
+  await page.goto(`chrome-extension://${extensionId}/tabs.html`);
+
+  const item = page.locator("[data-tab]", { hasText: "Bar Enable Test" });
+  await expect(item).toBeVisible();
+
+  await item.click();
+
+  await expect(page.locator("[data-copy-selected]")).toBeEnabled();
+  await expect(page.locator("[data-close-selected]")).toBeEnabled();
+  await expect(page.locator("[data-selected-count]")).toHaveText("1 selected");
+
+  await newPage.close();
+});
+
+test("clear selected deselects all tabs", async ({ context, page, extensionId }) => {
+  const newPage = await context.newPage();
+  await newPage.goto("data:text/html,<title>Clear Select Test</title>");
+  await newPage.waitForLoadState("domcontentloaded");
+
+  await page.goto(`chrome-extension://${extensionId}/tabs.html`);
+
+  const item = page.locator("[data-tab]", { hasText: "Clear Select Test" });
+  await expect(item).toBeVisible();
+
+  await item.click();
+  await expect(page.locator("[data-selected-count]")).toHaveText("1 selected");
+
+  await page.locator("[data-clear-selected]").click();
+  await expect(page.locator("[data-selected-count]")).toHaveText("0 selected");
+  await expect(item.locator("[data-tab-checkbox]")).not.toBeChecked();
+
+  await newPage.close();
 });
 
 test("batch copy with selection sets data-copied attribute", async ({ context, page, extensionId }) => {
@@ -106,16 +226,17 @@ test("batch copy with selection sets data-copied attribute", async ({ context, p
   await pageB.goto("data:text/html,<title>Link B</title>");
   await pageB.waitForLoadState("domcontentloaded");
 
-  await page.goto(`chrome-extension://${extensionId}/sidepanel.html`);
+  await page.goto(`chrome-extension://${extensionId}/tabs.html`);
 
   await expect(page.locator("[data-tab]", { hasText: "Link A" })).toBeVisible();
   await expect(page.locator("[data-tab]", { hasText: "Link B" })).toBeVisible();
 
-  await page.locator("[data-tab]", { hasText: "Link A" }).locator("[data-tab-checkbox]").click();
-  await page.locator("[data-tab]", { hasText: "Link B" }).locator("[data-tab-checkbox]").click();
+  // Click rows to select (not checkboxes)
+  await page.locator("[data-tab]", { hasText: "Link A" }).click();
+  await page.locator("[data-tab]", { hasText: "Link B" }).click();
 
   const copyBtn = page.locator("[data-copy-selected]");
-  await expect(copyBtn).toBeVisible();
+  await expect(copyBtn).toBeEnabled();
   await copyBtn.click();
 
   await expect(copyBtn).toHaveAttribute("data-copied", "true");
@@ -137,14 +258,15 @@ test("selects and closes multiple tabs at once", async ({ context, page, extensi
   await pageCharlie.goto("data:text/html,<title>Charlie</title>");
   await pageCharlie.waitForLoadState("domcontentloaded");
 
-  await page.goto(`chrome-extension://${extensionId}/sidepanel.html`);
+  await page.goto(`chrome-extension://${extensionId}/tabs.html`);
 
   await expect(page.locator("[data-tab]", { hasText: "Alpha" })).toBeVisible();
   await expect(page.locator("[data-tab]", { hasText: "Bravo" })).toBeVisible();
   await expect(page.locator("[data-tab]", { hasText: "Charlie" })).toBeVisible();
 
-  await page.locator("[data-tab]", { hasText: "Alpha" }).locator("[data-tab-checkbox]").click();
-  await page.locator("[data-tab]", { hasText: "Charlie" }).locator("[data-tab-checkbox]").click();
+  // Click rows to select
+  await page.locator("[data-tab]", { hasText: "Alpha" }).click();
+  await page.locator("[data-tab]", { hasText: "Charlie" }).click();
 
   await expect(page.locator("[data-selected-count]")).toHaveText("2 selected");
 
@@ -163,7 +285,7 @@ test("filters tabs by title", async ({ context, page, extensionId }) => {
   await newPage.goto("data:text/html,<title>Unique Filter Target</title>");
   await newPage.waitForLoadState("domcontentloaded");
 
-  await page.goto(`chrome-extension://${extensionId}/sidepanel.html`);
+  await page.goto(`chrome-extension://${extensionId}/tabs.html`);
   await expect(page.locator("[data-tab]", { hasText: "Unique Filter Target" })).toBeVisible();
 
   const countBefore = await page.locator("[data-tab]").count();
@@ -182,37 +304,16 @@ test("filters tabs by URL", async ({ context, page, extensionId }) => {
   await newPage.goto("data:text/html,<title>URL Filter Test</title>");
   await newPage.waitForLoadState("domcontentloaded");
 
-  await page.goto(`chrome-extension://${extensionId}/sidepanel.html`);
+  await page.goto(`chrome-extension://${extensionId}/tabs.html`);
   await expect(page.locator("[data-tab]", { hasText: "URL Filter Test" })).toBeVisible();
 
   await page.locator("[data-filter]").fill("data:text/html");
 
   const filtered = page.locator("[data-tab]");
   await expect(filtered.first()).toBeVisible();
-  // All visible tabs should have URLs containing the filter text
   for (const url of await filtered.locator("[data-tab-url]").allTextContents()) {
     expect(url.toLowerCase()).toContain("data:text/html");
   }
-
-  await newPage.close();
-});
-
-test("filter clears and shows all tabs", async ({ context, page, extensionId }) => {
-  const newPage = await context.newPage();
-  await newPage.goto("data:text/html,<title>Clear Filter Test</title>");
-  await newPage.waitForLoadState("domcontentloaded");
-
-  await page.goto(`chrome-extension://${extensionId}/sidepanel.html`);
-
-  await expect(page.locator("[data-tab]", { hasText: "Clear Filter Test" })).toBeVisible();
-  const countAll = await page.locator("[data-tab]").count();
-  expect(countAll).toBeGreaterThan(1);
-
-  await page.locator("[data-filter]").fill("Clear Filter Test");
-  await expect(page.locator("[data-tab]")).toHaveCount(1);
-
-  await page.locator("[data-filter]").clear();
-  await expect(page.locator("[data-tab]")).toHaveCount(countAll);
 
   await newPage.close();
 });
@@ -230,7 +331,7 @@ test("select all only affects filtered tabs", async ({ context, page, extensionI
   await pageC.goto("data:text/html,<title>Other Tab</title>");
   await pageC.waitForLoadState("domcontentloaded");
 
-  await page.goto(`chrome-extension://${extensionId}/sidepanel.html`);
+  await page.goto(`chrome-extension://${extensionId}/tabs.html`);
 
   await expect(page.locator("[data-tab]", { hasText: "FilterSelectA" })).toBeVisible();
   await expect(page.locator("[data-tab]", { hasText: "FilterSelectB" })).toBeVisible();
