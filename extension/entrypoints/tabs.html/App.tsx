@@ -55,7 +55,7 @@ function ContextMenu({
   };
 
   const closeTab = () => {
-    browser.tabs.remove(tab.id);
+    browser.tabs.remove(tab.id).catch(() => {});
     onClose();
   };
 
@@ -98,8 +98,24 @@ function App() {
   const copiedTabTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
   const [bulkCopied, triggerBulkCopied] = useCopied();
   const [menuTabId, setMenuTabId] = useState<number | null>(null);
+  const filterRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => () => clearTimeout(copiedTabTimer.current), []);
+
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === "/" && document.activeElement !== filterRef.current) {
+        e.preventDefault();
+        filterRef.current?.focus();
+      }
+      if (e.key === "Escape" && document.activeElement === filterRef.current) {
+        setFilter("");
+        filterRef.current?.blur();
+      }
+    };
+    document.addEventListener("keydown", handler);
+    return () => document.removeEventListener("keydown", handler);
+  }, []);
 
   useEffect(() => {
     const refresh = () => {
@@ -162,7 +178,7 @@ function App() {
   };
 
   const closeSelected = () => {
-    browser.tabs.remove([...selectedTabs]);
+    browser.tabs.remove([...selectedTabs]).catch(() => {});
     setSelectedTabs(new Set());
   };
 
@@ -198,8 +214,9 @@ function App() {
         />
         <div className="relative flex-1">
           <input
+            ref={filterRef}
             type="text"
-            placeholder="Filter tabs..."
+            placeholder="Filter tabs…  /"
             value={filter}
             onChange={(e) => setFilter(e.target.value)}
             data-filter
@@ -271,6 +288,11 @@ function App() {
       </div>
 
       <ul className="flex flex-col">
+        {filter && filteredTabs.length === 0 && (
+          <li className="px-3 py-6 text-center text-xs text-muted">
+            No tabs matching &ldquo;{filter}&rdquo;
+          </li>
+        )}
         {filteredTabs.map((tab) => (
           <li
             key={tab.id}
