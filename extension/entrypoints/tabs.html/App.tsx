@@ -230,7 +230,7 @@ function App() {
       >
         <span
           data-selected-count
-          className="flex-1 text-xs text-muted"
+          className="text-xs text-muted"
         >
           {selectedTabs.size} selected
         </span>
@@ -238,12 +238,12 @@ function App() {
           data-clear-selected
           disabled={!hasSelection}
           className={clsx(
-            "rounded border border-border bg-transparent px-2 py-1 text-xs",
-            hasSelection ? "cursor-pointer" : "cursor-default opacity-40",
+            "flex-1 rounded border-none bg-transparent px-1 py-1 text-left text-xs",
+            hasSelection ? "cursor-pointer text-accent" : "cursor-default opacity-40",
           )}
           onClick={() => setSelectedTabs(new Set())}
         >
-          Clear
+          Clear selected
         </button>
         <button
           data-copy-selected
