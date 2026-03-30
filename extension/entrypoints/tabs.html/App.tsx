@@ -282,21 +282,33 @@ function App() {
             )}
             onClick={() => toggleSelect(tab.id)}
           >
-            <input
-              type="checkbox"
-              data-tab-checkbox
-              className="shrink-0 cursor-pointer"
-              checked={selectedTabs.has(tab.id)}
-              readOnly
-            />
-            <img
-              className="size-4 shrink-0 rounded-sm"
-              src={tab.favIconUrl || FALLBACK_ICON}
-              alt=""
-              onError={(e) => {
-                (e.target as HTMLImageElement).src = FALLBACK_ICON;
-              }}
-            />
+            <span className="relative flex size-4 shrink-0 items-center justify-center">
+              <img
+                className={clsx(
+                  "size-4 rounded-sm",
+                  selectedTabs.has(tab.id)
+                    ? "hidden"
+                    : "block group-hover:hidden",
+                )}
+                src={tab.favIconUrl || FALLBACK_ICON}
+                alt=""
+                onError={(e) => {
+                  (e.target as HTMLImageElement).src = FALLBACK_ICON;
+                }}
+              />
+              <input
+                type="checkbox"
+                data-tab-checkbox
+                className={clsx(
+                  "size-4 cursor-pointer",
+                  selectedTabs.has(tab.id)
+                    ? "block"
+                    : "hidden group-hover:block",
+                )}
+                checked={selectedTabs.has(tab.id)}
+                readOnly
+              />
+            </span>
             <div className="min-w-0 flex-1">
               <div data-tab-title className="truncate text-[13px]">
                 {tab.title || tab.url}
