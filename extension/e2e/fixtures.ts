@@ -6,7 +6,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 export const test = base.extend<{
   context: BrowserContext;
-  extensionId: string;
+  extensionUrl: string;
 }>({
   // biome-ignore lint: destructuring
   context: async ({}, use) => {
@@ -21,13 +21,13 @@ export const test = base.extend<{
     await use(context);
     await context.close();
   },
-  extensionId: async ({ context }, use) => {
+  extensionUrl: async ({ context }, use) => {
     let [background] = context.serviceWorkers();
     if (!background) {
       background = await context.waitForEvent("serviceworker");
     }
     const extensionId = background.url().split("/")[2];
-    await use(extensionId);
+    await use(`chrome-extension://${extensionId}`);
   },
 });
 

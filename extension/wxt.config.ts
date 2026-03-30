@@ -9,7 +9,15 @@ export default defineConfig({
   }),
   manifest: {
     action: {},
-    permissions: ["tabs", "contextMenus", "activeTab", "scripting"],
+    permissions: ["tabs", "contextMenus", "activeTab", "scripting", "sidePanel"],
+    sidebar_action: {
+      default_panel: "sidepanel.html",
+    },
+    browser_specific_settings: {
+      gecko: {
+        id: "tab-man@browser-extension",
+      },
+    },
   },
   webExt: {
     binaries: {

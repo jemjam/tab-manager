@@ -1,31 +1,31 @@
 import { expect, test } from "./fixtures";
 
-test("renders a list of open tabs", async ({ page, extensionId }) => {
-  await page.goto(`chrome-extension://${extensionId}/tabs.html`);
+test("renders a list of open tabs", async ({ page, extensionUrl }) => {
+  await page.goto(`${extensionUrl}/tabs.html`);
 
   const items = page.locator("[data-tab]");
   await expect(items.first()).toBeVisible();
   expect(await items.count()).toBeGreaterThan(0);
 });
 
-test("displays tab titles", async ({ context, page, extensionId }) => {
+test("displays tab titles", async ({ context, page, extensionUrl }) => {
   const newPage = await context.newPage();
   await newPage.goto("data:text/html,<title>Test Tab Title</title>");
   await newPage.waitForLoadState("domcontentloaded");
 
-  await page.goto(`chrome-extension://${extensionId}/tabs.html`);
+  await page.goto(`${extensionUrl}/tabs.html`);
 
   await expect(page.locator("[data-tab-title]", { hasText: "Test Tab Title" })).toBeVisible();
 
   await newPage.close();
 });
 
-test("displays tab URL below title", async ({ context, page, extensionId }) => {
+test("displays tab URL below title", async ({ context, page, extensionUrl }) => {
   const newPage = await context.newPage();
   await newPage.goto("data:text/html,<title>URL Display Test</title>");
   await newPage.waitForLoadState("domcontentloaded");
 
-  await page.goto(`chrome-extension://${extensionId}/tabs.html`);
+  await page.goto(`${extensionUrl}/tabs.html`);
 
   const item = page.locator("[data-tab]", { hasText: "URL Display Test" });
   await expect(item).toBeVisible();
@@ -35,12 +35,12 @@ test("displays tab URL below title", async ({ context, page, extensionId }) => {
   await newPage.close();
 });
 
-test("clicking a row toggles selection", async ({ context, page, extensionId }) => {
+test("clicking a row toggles selection", async ({ context, page, extensionUrl }) => {
   const newPage = await context.newPage();
   await newPage.goto("data:text/html,<title>Click Select Test</title>");
   await newPage.waitForLoadState("domcontentloaded");
 
-  await page.goto(`chrome-extension://${extensionId}/tabs.html`);
+  await page.goto(`${extensionUrl}/tabs.html`);
 
   const item = page.locator("[data-tab]", { hasText: "Click Select Test" });
   await expect(item).toBeVisible();
@@ -57,12 +57,12 @@ test("clicking a row toggles selection", async ({ context, page, extensionId }) 
   await newPage.close();
 });
 
-test("clicking a row does not activate the tab", async ({ context, page, extensionId }) => {
+test("clicking a row does not activate the tab", async ({ context, page, extensionUrl }) => {
   const newPage = await context.newPage();
   await newPage.goto("data:text/html,<title>No Activate Test</title>");
   await newPage.waitForLoadState("domcontentloaded");
 
-  await page.goto(`chrome-extension://${extensionId}/tabs.html`);
+  await page.goto(`${extensionUrl}/tabs.html`);
 
   const item = page.locator("[data-tab]", { hasText: "No Activate Test" });
   await expect(item).toBeVisible();
@@ -76,12 +76,12 @@ test("clicking a row does not activate the tab", async ({ context, page, extensi
   await newPage.close();
 });
 
-test("context menu opens and has three actions", async ({ context, page, extensionId }) => {
+test("context menu opens and has three actions", async ({ context, page, extensionUrl }) => {
   const newPage = await context.newPage();
   await newPage.goto("data:text/html,<title>Menu Test</title>");
   await newPage.waitForLoadState("domcontentloaded");
 
-  await page.goto(`chrome-extension://${extensionId}/tabs.html`);
+  await page.goto(`${extensionUrl}/tabs.html`);
 
   const item = page.locator("[data-tab]", { hasText: "Menu Test" });
   await expect(item).toBeVisible();
@@ -98,12 +98,12 @@ test("context menu opens and has three actions", async ({ context, page, extensi
   await newPage.close();
 });
 
-test("context menu closes a tab", async ({ context, page, extensionId }) => {
+test("context menu closes a tab", async ({ context, page, extensionUrl }) => {
   const newPage = await context.newPage();
   await newPage.goto("data:text/html,<title>Menu Close Test</title>");
   await newPage.waitForLoadState("domcontentloaded");
 
-  await page.goto(`chrome-extension://${extensionId}/tabs.html`);
+  await page.goto(`${extensionUrl}/tabs.html`);
 
   const item = page.locator("[data-tab]", { hasText: "Menu Close Test" });
   await expect(item).toBeVisible();
@@ -117,12 +117,12 @@ test("context menu closes a tab", async ({ context, page, extensionId }) => {
   await expect(item).not.toBeVisible();
 });
 
-test("context menu closes on outside click", async ({ context, page, extensionId }) => {
+test("context menu closes on outside click", async ({ context, page, extensionUrl }) => {
   const newPage = await context.newPage();
   await newPage.goto("data:text/html,<title>Menu Outside Test</title>");
   await newPage.waitForLoadState("domcontentloaded");
 
-  await page.goto(`chrome-extension://${extensionId}/tabs.html`);
+  await page.goto(`${extensionUrl}/tabs.html`);
 
   const item = page.locator("[data-tab]", { hasText: "Menu Outside Test" });
   await expect(item).toBeVisible();
@@ -138,12 +138,12 @@ test("context menu closes on outside click", async ({ context, page, extensionId
   await newPage.close();
 });
 
-test("filter clear button appears and clears filter", async ({ context, page, extensionId }) => {
+test("filter clear button appears and clears filter", async ({ context, page, extensionUrl }) => {
   const newPage = await context.newPage();
   await newPage.goto("data:text/html,<title>Filter Clear Test</title>");
   await newPage.waitForLoadState("domcontentloaded");
 
-  await page.goto(`chrome-extension://${extensionId}/tabs.html`);
+  await page.goto(`${extensionUrl}/tabs.html`);
 
   // Clear button not visible when filter is empty
   await expect(page.locator("[data-filter-clear]")).not.toBeVisible();
@@ -164,8 +164,8 @@ test("filter clear button appears and clears filter", async ({ context, page, ex
   await newPage.close();
 });
 
-test("bulk action bar always visible, disabled when nothing selected", async ({ page, extensionId }) => {
-  await page.goto(`chrome-extension://${extensionId}/tabs.html`);
+test("bulk action bar always visible, disabled when nothing selected", async ({ page, extensionUrl }) => {
+  await page.goto(`${extensionUrl}/tabs.html`);
   await expect(page.locator("[data-tab]").first()).toBeVisible();
 
   // Bar is visible
@@ -178,12 +178,12 @@ test("bulk action bar always visible, disabled when nothing selected", async ({ 
   await expect(page.locator("[data-selected-count]")).toHaveText("0 selected");
 });
 
-test("bulk action bar enables when tabs selected", async ({ context, page, extensionId }) => {
+test("bulk action bar enables when tabs selected", async ({ context, page, extensionUrl }) => {
   const newPage = await context.newPage();
   await newPage.goto("data:text/html,<title>Bar Enable Test</title>");
   await newPage.waitForLoadState("domcontentloaded");
 
-  await page.goto(`chrome-extension://${extensionId}/tabs.html`);
+  await page.goto(`${extensionUrl}/tabs.html`);
 
   const item = page.locator("[data-tab]", { hasText: "Bar Enable Test" });
   await expect(item).toBeVisible();
@@ -197,12 +197,12 @@ test("bulk action bar enables when tabs selected", async ({ context, page, exten
   await newPage.close();
 });
 
-test("clear selected deselects all tabs", async ({ context, page, extensionId }) => {
+test("clear selected deselects all tabs", async ({ context, page, extensionUrl }) => {
   const newPage = await context.newPage();
   await newPage.goto("data:text/html,<title>Clear Select Test</title>");
   await newPage.waitForLoadState("domcontentloaded");
 
-  await page.goto(`chrome-extension://${extensionId}/tabs.html`);
+  await page.goto(`${extensionUrl}/tabs.html`);
 
   const item = page.locator("[data-tab]", { hasText: "Clear Select Test" });
   await expect(item).toBeVisible();
@@ -217,7 +217,7 @@ test("clear selected deselects all tabs", async ({ context, page, extensionId })
   await newPage.close();
 });
 
-test("batch copy with selection sets data-copied attribute", async ({ context, page, extensionId }) => {
+test("batch copy with selection sets data-copied attribute", async ({ context, page, extensionUrl }) => {
   const pageA = await context.newPage();
   await pageA.goto("data:text/html,<title>Link A</title>");
   await pageA.waitForLoadState("domcontentloaded");
@@ -226,7 +226,7 @@ test("batch copy with selection sets data-copied attribute", async ({ context, p
   await pageB.goto("data:text/html,<title>Link B</title>");
   await pageB.waitForLoadState("domcontentloaded");
 
-  await page.goto(`chrome-extension://${extensionId}/tabs.html`);
+  await page.goto(`${extensionUrl}/tabs.html`);
 
   await expect(page.locator("[data-tab]", { hasText: "Link A" })).toBeVisible();
   await expect(page.locator("[data-tab]", { hasText: "Link B" })).toBeVisible();
@@ -245,7 +245,7 @@ test("batch copy with selection sets data-copied attribute", async ({ context, p
   await pageB.close();
 });
 
-test("selects and closes multiple tabs at once", async ({ context, page, extensionId }) => {
+test("selects and closes multiple tabs at once", async ({ context, page, extensionUrl }) => {
   const pageAlpha = await context.newPage();
   await pageAlpha.goto("data:text/html,<title>Alpha</title>");
   await pageAlpha.waitForLoadState("domcontentloaded");
@@ -258,7 +258,7 @@ test("selects and closes multiple tabs at once", async ({ context, page, extensi
   await pageCharlie.goto("data:text/html,<title>Charlie</title>");
   await pageCharlie.waitForLoadState("domcontentloaded");
 
-  await page.goto(`chrome-extension://${extensionId}/tabs.html`);
+  await page.goto(`${extensionUrl}/tabs.html`);
 
   await expect(page.locator("[data-tab]", { hasText: "Alpha" })).toBeVisible();
   await expect(page.locator("[data-tab]", { hasText: "Bravo" })).toBeVisible();
@@ -280,12 +280,12 @@ test("selects and closes multiple tabs at once", async ({ context, page, extensi
   await expect(page.locator("[data-tab]", { hasText: "Charlie" })).not.toBeVisible();
 });
 
-test("filters tabs by title", async ({ context, page, extensionId }) => {
+test("filters tabs by title", async ({ context, page, extensionUrl }) => {
   const newPage = await context.newPage();
   await newPage.goto("data:text/html,<title>Unique Filter Target</title>");
   await newPage.waitForLoadState("domcontentloaded");
 
-  await page.goto(`chrome-extension://${extensionId}/tabs.html`);
+  await page.goto(`${extensionUrl}/tabs.html`);
   await expect(page.locator("[data-tab]", { hasText: "Unique Filter Target" })).toBeVisible();
 
   const countBefore = await page.locator("[data-tab]").count();
@@ -299,12 +299,12 @@ test("filters tabs by title", async ({ context, page, extensionId }) => {
   await newPage.close();
 });
 
-test("filters tabs by URL", async ({ context, page, extensionId }) => {
+test("filters tabs by URL", async ({ context, page, extensionUrl }) => {
   const newPage = await context.newPage();
   await newPage.goto("data:text/html,<title>URL Filter Test</title>");
   await newPage.waitForLoadState("domcontentloaded");
 
-  await page.goto(`chrome-extension://${extensionId}/tabs.html`);
+  await page.goto(`${extensionUrl}/tabs.html`);
   await expect(page.locator("[data-tab]", { hasText: "URL Filter Test" })).toBeVisible();
 
   await page.locator("[data-filter]").fill("data:text/html");
@@ -318,7 +318,7 @@ test("filters tabs by URL", async ({ context, page, extensionId }) => {
   await newPage.close();
 });
 
-test("select all only affects filtered tabs", async ({ context, page, extensionId }) => {
+test("select all only affects filtered tabs", async ({ context, page, extensionUrl }) => {
   const pageA = await context.newPage();
   await pageA.goto("data:text/html,<title>FilterSelectA</title>");
   await pageA.waitForLoadState("domcontentloaded");
@@ -331,7 +331,7 @@ test("select all only affects filtered tabs", async ({ context, page, extensionI
   await pageC.goto("data:text/html,<title>Other Tab</title>");
   await pageC.waitForLoadState("domcontentloaded");
 
-  await page.goto(`chrome-extension://${extensionId}/tabs.html`);
+  await page.goto(`${extensionUrl}/tabs.html`);
 
   await expect(page.locator("[data-tab]", { hasText: "FilterSelectA" })).toBeVisible();
   await expect(page.locator("[data-tab]", { hasText: "FilterSelectB" })).toBeVisible();
