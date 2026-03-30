@@ -54,6 +54,11 @@ function ContextMenu({
     onClose();
   };
 
+  const duplicateTab = () => {
+    browser.tabs.duplicate(tab.id);
+    onClose();
+  };
+
   const closeTab = () => {
     browser.tabs.remove(tab.id).catch(() => {});
     onClose();
@@ -78,6 +83,13 @@ function ContextMenu({
         onClick={copyLink}
       >
         Copy link
+      </button>
+      <button
+        data-menu-duplicate
+        className="w-full cursor-pointer px-3 py-1.5 text-left text-xs hover:bg-hover"
+        onClick={duplicateTab}
+      >
+        Duplicate tab
       </button>
       <button
         data-menu-close

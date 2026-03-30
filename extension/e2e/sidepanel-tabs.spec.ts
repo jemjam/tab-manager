@@ -76,7 +76,7 @@ test("clicking a row does not activate the tab", async ({ context, page, extensi
   await newPage.close();
 });
 
-test("context menu opens and has three actions", async ({ context, page, extensionUrl }) => {
+test("context menu opens and has four actions", async ({ context, page, extensionUrl }) => {
   const newPage = await context.newPage();
   await newPage.goto("data:text/html,<title>Menu Test</title>");
   await newPage.waitForLoadState("domcontentloaded");
@@ -93,6 +93,7 @@ test("context menu opens and has three actions", async ({ context, page, extensi
   await expect(menu).toBeVisible();
   await expect(menu.locator("[data-menu-focus]")).toHaveText("Focus tab");
   await expect(menu.locator("[data-menu-copy]")).toHaveText("Copy link");
+  await expect(menu.locator("[data-menu-duplicate]")).toHaveText("Duplicate tab");
   await expect(menu.locator("[data-menu-close]")).toHaveText("Close tab");
 
   await newPage.close();
@@ -115,6 +116,24 @@ test("context menu closes a tab", async ({ context, page, extensionUrl }) => {
 
   await expect(page.locator("[data-tab]")).toHaveCount(countBefore - 1);
   await expect(item).not.toBeVisible();
+});
+
+test("context menu duplicates a tab", async ({ context, page, extensionUrl }) => {
+  const newPage = await context.newPage();
+  await newPage.goto("data:text/html,<title>Menu Dup Test</title>");
+  await newPage.waitForLoadState("domcontentloaded");
+
+  await page.goto(`${extensionUrl}/tabs.html`);
+
+  const item = page.locator("[data-tab]", { hasText: "Menu Dup Test" });
+  await expect(item).toBeVisible();
+  const countBefore = await page.locator("[data-tab]").count();
+
+  await item.hover();
+  await item.locator("[data-tab-menu]").click();
+  await item.locator("[data-menu-duplicate]").click();
+
+  await expect(page.locator("[data-tab]")).toHaveCount(countBefore + 1);
 });
 
 test("context menu closes on outside click", async ({ context, page, extensionUrl }) => {
