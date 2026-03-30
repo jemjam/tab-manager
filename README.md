@@ -1,6 +1,21 @@
-# Browser Extension
+# tab-man
 
-Let's experiment with making a browser extension for ourselves.
+Browser extension for managing tabs — list, filter, select, copy links, and close tabs from a side panel or full page.
 
-- Using WXT as the framework/base (makes setup/scaffold much simpler)
-- Using tailwind for styling, we don't think about css
+Built with [WXT](https://wxt.dev), React 19, Tailwind CSS v4, and TypeScript. Supports Chrome, Firefox, and Vivaldi.
+
+## Development
+
+```sh
+cd extension
+pnpm install
+pnpm dev            # Chromium
+pnpm dev:firefox    # Firefox
+```
+
+## Testing
+
+```sh
+cd extension
+pnpm build && pnpm e2e
+```

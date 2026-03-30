@@ -1,10 +1,8 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
-
 ## Project
 
-**tab-man** — a browser extension for managing tabs, built as a side panel. Uses WXT (browser extension framework) with React 19, Tailwind CSS v4, and TypeScript.
+**tab-man** — a browser extension for managing tabs. Uses WXT with React 19, Tailwind CSS v4, and TypeScript.
 
 ## Commands
 
@@ -18,15 +16,11 @@ pnpm compile          # Type-check (tsc --noEmit)
 pnpm e2e              # Playwright e2e tests (requires build first)
 ```
 
-E2E tests need a built extension at `extension/.output/chrome-mv3`. Run `pnpm build` before `pnpm e2e`.
-
 ## Architecture
 
-- **Framework:** WXT (`wxt.config.ts`) with React module and Tailwind v4 Vite plugin
 - **Entrypoints:**
-  - `entrypoints/background.ts` — service worker; opens side panel on action click
-  - `entrypoints/sidepanel/` — React app (single `App.tsx` component) that lists, filters, selects, copies, and closes browser tabs
-- **Styling:** Tailwind v4 with system-color-based theme tokens in `App.css` (respects `light-dark()` / `color-scheme`)
-- **Browser APIs used:** `browser.tabs`, `browser.sidePanel`, `browser.windows`
-- **E2E tests:** Playwright with custom fixtures (`e2e/fixtures.ts`) that launch Chromium with the built extension loaded. Tests use `data-*` attributes as selectors.
-- **Dev profile:** Chromium dev profile persisted at `extension/.dev-profile/` (gitignored)
+  - `entrypoints/background.ts` — service worker; opens side panel, registers context menus
+  - `entrypoints/tabs.html/` — main React UI (tab list, filter, selection, bulk actions)
+  - `entrypoints/sidepanel/` — thin wrapper that renders the same `tabs.html/App`
+- **Styling:** Tailwind v4 with system-color theme tokens in `App.css` (`light-dark()` / `color-scheme`)
+- **E2E tests:** Playwright with custom fixtures (`e2e/fixtures.ts`). Tests use `data-*` selectors. Requires `pnpm build` before `pnpm e2e`.
