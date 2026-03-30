@@ -9,7 +9,7 @@ export default defineConfig({
   }),
   manifest: {
     action: {},
-    permissions: ["tabs"],
+    permissions: ["tabs", "contextMenus", "activeTab", "scripting"],
   },
   webExt: {
     binaries: {
