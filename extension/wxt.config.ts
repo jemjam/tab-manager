@@ -7,18 +7,18 @@ export default defineConfig({
   vite: () => ({
     plugins: [tailwindcss()],
   }),
-  manifest: {
+  manifest: ({ browser }) => ({
     action: {},
     permissions: ["tabs", "contextMenus", "activeTab", "scripting", "sidePanel"],
-    sidebar_action: {
-      default_panel: "sidepanel.html",
-    },
+    ...(browser === "firefox" && {
+      sidebar_action: { default_panel: "sidepanel.html" },
+    }),
     browser_specific_settings: {
       gecko: {
         id: "tab-man@browser-extension",
       },
     },
-  },
+  }),
   webExt: {
     binaries: {
       vivaldi: "/Applications/Vivaldi.app/Contents/MacOS/Vivaldi",
