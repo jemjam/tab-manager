@@ -4,8 +4,62 @@ import clsx from "clsx";
 
 type Tab = Browser.tabs.Tab & { id: number };
 
-const FALLBACK_ICON =
-  "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><rect width='16' height='16' rx='2' fill='%23ccc'/></svg>";
+function tabHost(tab: Tab): string {
+  if (!tab.url) return "";
+  try {
+    return new URL(tab.url).hostname;
+  } catch {
+    return "";
+  }
+}
+
+function tabLetter(tab: Tab): string {
+  const host = tabHost(tab);
+  const source = host || tab.title || "?";
+  const first = source.replace(/^www\./, "").trim().charAt(0);
+  return (first || "?").toUpperCase();
+}
+
+function hashString(s: string): number {
+  let h = 0;
+  for (let i = 0; i < s.length; i++) h = Math.imul(h, 31) + s.charCodeAt(i);
+  return h;
+}
+
+function tabColor(tab: Tab): string {
+  const seed = tabHost(tab) || tab.title || String(tab.id);
+  const hue = Math.abs(hashString(seed)) % 360;
+  return `hsl(${hue} 55% 45%)`;
+}
+
+function Favicon({ tab, className }: { tab: Tab; className?: string }) {
+  const [errored, setErrored] = useState(false);
+  useEffect(() => setErrored(false), [tab.favIconUrl]);
+
+  const hasIcon = !!tab.favIconUrl && !errored;
+  if (hasIcon) {
+    return (
+      <img
+        className={clsx("rounded-sm", className)}
+        src={tab.favIconUrl}
+        alt=""
+        onError={() => setErrored(true)}
+      />
+    );
+  }
+  return (
+    <span
+      aria-hidden="true"
+      className={clsx(
+        "flex items-center justify-center rounded-sm text-[10px] font-semibold leading-none text-white",
+        className,
+      )}
+      style={{ background: tabColor(tab) }}
+    >
+      {tabLetter(tab)}
+    </span>
+  );
+}
 
 function useCopied(): [boolean, () => void] {
   const [copied, setCopied] = useState(false);
@@ -381,18 +435,14 @@ function App() {
             onClick={() => toggleSelect(tab.id)}
           >
             <span className="relative flex size-4 shrink-0 items-center justify-center">
-              <img
+              <Favicon
+                tab={tab}
                 className={clsx(
-                  "size-4 rounded-sm",
+                  "size-4",
                   selectedTabs.has(tab.id)
                     ? "hidden"
-                    : "block group-hover:hidden",
+                    : "flex group-hover:hidden",
                 )}
-                src={tab.favIconUrl || FALLBACK_ICON}
-                alt=""
-                onError={(e) => {
-                  (e.target as HTMLImageElement).src = FALLBACK_ICON;
-                }}
               />
               <input
                 type="checkbox"
