@@ -72,28 +72,28 @@ function ContextMenu({
     >
       <button
         data-menu-focus
-        className="w-full cursor-pointer px-3 py-1.5 text-left text-xs hover:bg-hover"
+        className="w-full cursor-pointer px-3 py-1.5 text-left text-[11px] hover:bg-hover"
         onClick={focusTab}
       >
         Focus tab
       </button>
       <button
         data-menu-copy
-        className="w-full cursor-pointer px-3 py-1.5 text-left text-xs hover:bg-hover"
+        className="w-full cursor-pointer px-3 py-1.5 text-left text-[11px] hover:bg-hover"
         onClick={copyLink}
       >
         Copy link
       </button>
       <button
         data-menu-duplicate
-        className="w-full cursor-pointer px-3 py-1.5 text-left text-xs hover:bg-hover"
+        className="w-full cursor-pointer px-3 py-1.5 text-left text-[11px] hover:bg-hover"
         onClick={duplicateTab}
       >
         Duplicate tab
       </button>
       <button
         data-menu-close
-        className="w-full cursor-pointer px-3 py-1.5 text-left text-xs text-danger hover:bg-hover"
+        className="w-full cursor-pointer px-3 py-1.5 text-left text-[11px] text-danger hover:bg-hover"
         onClick={closeTab}
       >
         Close tab
@@ -136,7 +136,7 @@ function BulkMenu({
         data-copied={copied ? "true" : undefined}
         disabled={disabled}
         className={clsx(
-          "w-full px-3 py-1.5 text-left text-xs",
+          "w-full px-3 py-1.5 text-left text-[11px]",
           disabled ? "cursor-default opacity-40" : "cursor-pointer hover:bg-hover",
         )}
         onClick={onCopy}
@@ -147,7 +147,7 @@ function BulkMenu({
         data-close-selected
         disabled={disabled}
         className={clsx(
-          "w-full px-3 py-1.5 text-left text-xs text-danger",
+          "w-full px-3 py-1.5 text-left text-[11px] text-danger",
           disabled ? "cursor-default opacity-40" : "cursor-pointer hover:bg-hover",
         )}
         onClick={onCloseTabs}
@@ -282,7 +282,7 @@ function App() {
 
   return (
     <>
-      <div className="sticky top-0 z-10 border-b border-border bg-surface px-3 pb-2 pt-2">
+      <div className="sticky top-0 z-10 border-b border-border bg-surface px-3 pb-2 pt-3">
         <div className="relative">
           <input
             ref={filterRef}
@@ -291,7 +291,7 @@ function App() {
             value={filter}
             onChange={(e) => setFilter(e.target.value)}
             data-filter
-            className="w-full rounded border border-border bg-transparent px-2 py-1 pr-6 text-xs outline-none focus:border-accent"
+            className="h-7 w-full rounded-[3px] border border-input-border bg-transparent px-2 pr-6 text-[11px] leading-none outline-none placeholder:text-muted focus:border-accent"
           />
           {filter && (
             <button
@@ -307,7 +307,7 @@ function App() {
 
         <div
           data-bulk-bar
-          className="mt-2 flex items-center gap-2"
+          className="mt-2 flex h-6 items-center gap-2"
         >
           <input
             ref={selectAllRef}
@@ -315,11 +315,11 @@ function App() {
             checked={allSelected}
             onChange={toggleAll}
             data-select-all
-            className="shrink-0 cursor-pointer"
+            className="size-4 shrink-0 cursor-pointer accent-accent"
           />
           <span
             data-tab-count
-            className="text-xs text-muted"
+            className="text-[11px] text-muted"
           >
             {filteredTabs.length} Tabs Visible
           </span>
@@ -328,7 +328,7 @@ function App() {
             <button
               data-selected-count
               data-clear-selected
-              className="cursor-pointer border-none bg-transparent p-0 text-xs text-accent hover:underline"
+              className="cursor-pointer border-none bg-transparent p-0 text-[11px] text-accent hover:underline"
               onClick={() => setSelectedTabs(new Set())}
             >
               {selectedTabs.size} Selected
@@ -338,7 +338,7 @@ function App() {
             <button
               data-bulk-menu-button
               aria-label="Bulk actions"
-              className="flex size-5 cursor-pointer items-center justify-center rounded border-none bg-transparent text-sm opacity-60 hover:bg-hover hover:opacity-100"
+              className="flex size-6 cursor-pointer items-center justify-center rounded border-none bg-transparent text-base font-bold leading-none text-muted hover:bg-hover hover:text-on-surface"
               onClick={() => setBulkMenuOpen((v) => !v)}
             >
               ⋮
@@ -373,7 +373,7 @@ function App() {
             key={tab.id}
             data-tab
             className={clsx(
-              "group flex cursor-pointer items-center gap-2 border-b border-border px-3 py-2 hover:bg-hover",
+              "group flex min-h-16 cursor-pointer items-center gap-3 border-b border-border px-3 py-3 hover:bg-hover",
               tab.active && "bg-accent-subtle",
               selectedTabs.has(tab.id) &&
                 "bg-accent-subtle shadow-[inset_3px_0_0_var(--color-accent)]",
@@ -398,7 +398,7 @@ function App() {
                 type="checkbox"
                 data-tab-checkbox
                 className={clsx(
-                  "size-4 cursor-pointer",
+                  "size-4 cursor-pointer accent-accent",
                   selectedTabs.has(tab.id)
                     ? "block"
                     : "hidden group-hover:block",
@@ -408,13 +408,16 @@ function App() {
               />
             </span>
             <div className="min-w-0 flex-1">
-              <div data-tab-title className="truncate text-[13px]">
+              <div
+                data-tab-title
+                className="truncate text-[13px] font-medium leading-tight text-on-surface"
+              >
                 {tab.title || tab.url}
               </div>
               {tab.url && (
                 <div
                   data-tab-url
-                  className="truncate text-[11px] text-muted"
+                  className="mt-0.5 truncate text-[11px] leading-tight text-muted"
                 >
                   {tab.url}
                 </div>
@@ -423,7 +426,7 @@ function App() {
             <div className="relative shrink-0">
               <button
                 data-tab-menu
-                className="flex size-5 cursor-pointer items-center justify-center rounded border-none bg-transparent text-sm opacity-0 group-hover:opacity-60 hover:!opacity-100 hover:bg-hover"
+                className="flex size-6 cursor-pointer items-center justify-center rounded border-none bg-transparent text-base font-bold leading-none text-muted opacity-0 hover:bg-hover hover:text-on-surface group-hover:opacity-100"
                 onClick={(e) => {
                   e.stopPropagation();
                   setMenuTabId(menuTabId === tab.id ? null : tab.id);

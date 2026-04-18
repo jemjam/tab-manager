@@ -5,14 +5,14 @@
 }
 
 @theme {
-  --color-surface: Canvas;
-  --color-on-surface: CanvasText;
-  --color-muted: GrayText;
-  --color-border: ButtonBorder;
-  --color-accent: AccentColor;
-  --color-accent-subtle: color-mix(in srgb, AccentColor 15%, Canvas);
-  --color-accent-subtler: color-mix(in srgb, AccentColor 8%, Canvas);
-  --color-hover: color-mix(in srgb, CanvasText 6%, transparent);
+  --color-surface: light-dark(#ffffff, #171717);
+  --color-on-surface: light-dark(#171717, #f5f5f5);
+  --color-muted: light-dark(#6b7280, #a3a3a3);
+  --color-border: light-dark(#e5e7eb, #404040);
+  --color-input-border: light-dark(#d4d4d4, #525252);
+  --color-accent: light-dark(#3b82f6, #60a5fa);
+  --color-accent-subtle: light-dark(#eff6ff, #1a2332);
+  --color-hover: color-mix(in srgb, light-dark(#171717, #f5f5f5) 6%, transparent);
   --color-danger: light-dark(#dc2626, #f87171);
   --color-danger-border: light-dark(#fca5a5, #991b1b);
 }
