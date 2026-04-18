@@ -35,7 +35,7 @@ test("displays tab URL below title", async ({ context, page, extensionUrl }) => 
   await newPage.close();
 });
 
-test("clicking a row toggles selection", async ({ context, page, extensionUrl }) => {
+test("ctrl+clicking a row toggles selection", async ({ context, page, extensionUrl }) => {
   const newPage = await context.newPage();
   await newPage.goto("data:text/html,<title>Click Select Test</title>");
   await newPage.waitForLoadState("domcontentloaded");
@@ -48,10 +48,10 @@ test("clicking a row toggles selection", async ({ context, page, extensionUrl })
   const checkbox = item.locator("[data-tab-checkbox]");
   await expect(checkbox).not.toBeChecked();
 
-  await item.click();
+  await item.click({ modifiers: ["Meta"] });
   await expect(checkbox).toBeChecked();
 
-  await item.click();
+  await item.click({ modifiers: ["Meta"] });
   await expect(checkbox).not.toBeChecked();
 
   await newPage.close();
@@ -190,14 +190,11 @@ test("bulk action bar always visible, menu items disabled when nothing selected"
   // Bar is visible
   await expect(page.locator("[data-bulk-bar]")).toBeVisible();
 
-  // Selected count element is hidden when nothing selected
-  await expect(page.locator("[data-selected-count]")).not.toBeVisible();
+  // Selected count shows "0 selected" when nothing selected
+  await expect(page.locator("[data-selected-count]")).toHaveText("0 selected");
 
-  // Open the bulk menu — items are disabled
-  await page.locator("[data-bulk-menu-button]").click();
-  await expect(page.locator("[data-bulk-menu]")).toBeVisible();
-  await expect(page.locator("[data-copy-selected]")).toBeDisabled();
-  await expect(page.locator("[data-close-selected]")).toBeDisabled();
+  // Bulk menu button is disabled when nothing selected
+  await expect(page.locator("[data-bulk-menu-button]")).toBeDisabled();
 });
 
 test("bulk action bar enables when tabs selected", async ({ context, page, extensionUrl }) => {
@@ -210,7 +207,7 @@ test("bulk action bar enables when tabs selected", async ({ context, page, exten
   const item = page.locator("[data-tab]", { hasText: "Bar Enable Test" });
   await expect(item).toBeVisible();
 
-  await item.click();
+  await item.click({ modifiers: ["Meta"] });
 
   await expect(page.locator("[data-selected-count]")).toHaveText("1 Selected");
 
@@ -231,11 +228,11 @@ test("clear selected deselects all tabs", async ({ context, page, extensionUrl }
   const item = page.locator("[data-tab]", { hasText: "Clear Select Test" });
   await expect(item).toBeVisible();
 
-  await item.click();
+  await item.click({ modifiers: ["Meta"] });
   await expect(page.locator("[data-selected-count]")).toHaveText("1 Selected");
 
   await page.locator("[data-clear-selected]").click();
-  await expect(page.locator("[data-selected-count]")).not.toBeVisible();
+  await expect(page.locator("[data-selected-count]")).toHaveText("0 selected");
   await expect(item.locator("[data-tab-checkbox]")).not.toBeChecked();
 
   await newPage.close();
@@ -255,9 +252,9 @@ test("batch copy with selection sets data-copied attribute", async ({ context, p
   await expect(page.locator("[data-tab]", { hasText: "Link A" })).toBeVisible();
   await expect(page.locator("[data-tab]", { hasText: "Link B" })).toBeVisible();
 
-  // Click rows to select (not checkboxes)
-  await page.locator("[data-tab]", { hasText: "Link A" }).click();
-  await page.locator("[data-tab]", { hasText: "Link B" }).click();
+  // Ctrl+click rows to select
+  await page.locator("[data-tab]", { hasText: "Link A" }).click({ modifiers: ["Meta"] });
+  await page.locator("[data-tab]", { hasText: "Link B" }).click({ modifiers: ["Meta"] });
 
   await page.locator("[data-bulk-menu-button]").click();
   const copyBtn = page.locator("[data-copy-selected]");
@@ -291,9 +288,9 @@ test("selects and closes multiple tabs at once", async ({ context, page, extensi
   await expect(page.locator("[data-tab]", { hasText: "Bravo" })).toBeVisible();
   await expect(page.locator("[data-tab]", { hasText: "Charlie" })).toBeVisible();
 
-  // Click rows to select
-  await page.locator("[data-tab]", { hasText: "Alpha" }).click();
-  await page.locator("[data-tab]", { hasText: "Charlie" }).click();
+  // Ctrl+click rows to select
+  await page.locator("[data-tab]", { hasText: "Alpha" }).click({ modifiers: ["Meta"] });
+  await page.locator("[data-tab]", { hasText: "Charlie" }).click({ modifiers: ["Meta"] });
 
   await expect(page.locator("[data-selected-count]")).toHaveText("2 Selected");
 
@@ -335,10 +332,21 @@ test("filters tabs by URL", async ({ context, page, extensionUrl }) => {
   await page.goto(`${extensionUrl}/tabs.html`);
   await expect(page.locator("[data-tab]", { hasText: "URL Filter Test" })).toBeVisible();
 
+  const countBefore = await page.locator("[data-tab]").count();
   await page.locator("[data-filter]").fill("data:text/html");
 
+  // Wait for debounced filter to reduce the visible count
   const filtered = page.locator("[data-tab]");
-  await expect(filtered.first()).toBeVisible();
+  await expect(filtered).toHaveCount(
+    await filtered.count(),
+    { timeout: 1000 },
+  );
+  // Wait for filtering to settle — count should be less than before
+  await expect(async () => {
+    const count = await filtered.count();
+    expect(count).toBeLessThan(countBefore);
+  }).toPass({ timeout: 2000 });
+
   for (const url of await filtered.locator("[data-tab-url]").allTextContents()) {
     expect(url.toLowerCase()).toContain("data:text/html");
   }

@@ -61,6 +61,25 @@ function Favicon({ tab, className }: { tab: Tab; className?: string }) {
   );
 }
 
+function Highlight({ text, term }: { text: string; term: string }) {
+  if (!term) return <>{text}</>;
+  const escaped = term.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const parts = text.split(new RegExp(`(${escaped})`, "gi"));
+  return (
+    <>
+      {parts.map((part, i) =>
+        part.toLowerCase() === term.toLowerCase() ? (
+          <mark key={i} className="bg-highlight text-inherit">
+            {part}
+          </mark>
+        ) : (
+          part
+        ),
+      )}
+    </>
+  );
+}
+
 function useCopied(): [boolean, () => void] {
   const [copied, setCopied] = useState(false);
   const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
@@ -235,7 +254,15 @@ function BulkMenu({
 function App() {
   const [tabs, setTabs] = useState<Tab[]>([]);
   const [selectedTabs, setSelectedTabs] = useState<Set<number>>(new Set());
+  const [filterInput, setFilterInput] = useState("");
   const [filter, setFilter] = useState("");
+  const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
+  const updateFilter = useCallback((value: string) => {
+    setFilterInput(value);
+    clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => setFilter(value), 100);
+  }, []);
+  useEffect(() => () => clearTimeout(debounceRef.current), []);
   const [copiedTabId, setCopiedTabId] = useState<number | null>(null);
   const copiedTabTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
   const [bulkCopied, triggerBulkCopied] = useCopied();
@@ -243,6 +270,7 @@ function App() {
   const [bulkMenuOpen, setBulkMenuOpen] = useState(false);
   const filterRef = useRef<HTMLInputElement>(null);
   const selectAllRef = useRef<HTMLInputElement>(null);
+  const selectionAnchor = useRef<number | null>(null);
 
   useEffect(() => () => clearTimeout(copiedTabTimer.current), []);
 
@@ -259,7 +287,7 @@ function App() {
         filterRef.current?.focus();
       }
       if (e.key === "Escape" && document.activeElement === filterRef.current) {
-        setFilter("");
+        updateFilter("");
         filterRef.current?.blur();
       }
     };
@@ -369,8 +397,8 @@ function App() {
               ref={filterRef}
               type="text"
               placeholder="Filter terms"
-              value={filter}
-              onChange={(e) => setFilter(e.target.value)}
+              value={filterInput}
+              onChange={(e) => updateFilter(e.target.value)}
               data-filter
               className="h-7 w-full rounded-[3px] border border-input-border bg-transparent px-2 pr-6 text-[11px] leading-none outline-none placeholder:text-muted focus:border-accent"
             />
@@ -378,7 +406,7 @@ function App() {
               <button
                 data-filter-clear
                 className="absolute right-1 top-1/2 flex size-5 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full border-none bg-transparent text-base text-danger hover:text-danger"
-                onClick={() => setFilter("")}
+                onClick={() => updateFilter("")}
                 aria-label="Clear filter"
               >
                 ×
@@ -399,10 +427,12 @@ function App() {
               className="size-4 shrink-0 cursor-pointer accent-accent"
             />
             <span data-tab-count className="text-[11px] text-muted">
-              {filteredTabs.length} Tabs Visible
+              {filter
+                ? `${filteredTabs.length} of ${tabs.length} tabs`
+                : `All ${tabs.length} tabs`}
             </span>
             <div className="flex-1" />
-            {hasSelection && (
+            {hasSelection ? (
               <button
                 data-selected-count
                 data-clear-selected
@@ -412,14 +442,24 @@ function App() {
               >
                 {selectedTabs.size} Selected
               </button>
+            ) : (
+              <span data-selected-count className="text-[11px] text-muted opacity-50">
+                0 selected
+              </span>
             )}
             <div className="relative shrink-0">
               <button
                 data-bulk-menu-button
                 aria-label="Bulk actions"
-                className="flex size-6 cursor-pointer items-center justify-center rounded border-none bg-transparent text-base font-bold leading-none text-muted hover:bg-hover hover:text-on-surface"
+                disabled={!hasSelection}
+                className={clsx(
+                  "flex size-6 items-center justify-center rounded border-none bg-transparent text-base font-bold leading-none",
+                  hasSelection
+                    ? "cursor-pointer text-muted hover:bg-hover hover:text-on-surface"
+                    : "cursor-default text-muted opacity-40",
+                )}
                 onMouseDown={(e) => e.stopPropagation()}
-                onClick={() => setBulkMenuOpen((v) => !v)}
+                onClick={() => hasSelection && setBulkMenuOpen((v) => !v)}
               >
                 ⋮
               </button>
@@ -460,6 +500,40 @@ function App() {
                 "bg-accent-subtle shadow-[inset_3px_0_0_var(--color-accent)]",
             )}
             onDoubleClick={() => focusTab(tab)}
+            onClick={(e) => {
+              if (e.ctrlKey || e.metaKey) {
+                e.preventDefault();
+                toggleSelect(tab.id);
+                selectionAnchor.current = tab.id;
+              } else if (e.shiftKey) {
+                e.preventDefault();
+                const anchorId = selectionAnchor.current;
+                if (anchorId == null) {
+                  toggleSelect(tab.id);
+                  selectionAnchor.current = tab.id;
+                  return;
+                }
+                const anchorIdx = filteredTabs.findIndex((t) => t.id === anchorId);
+                if (anchorIdx === -1) {
+                  toggleSelect(tab.id);
+                  selectionAnchor.current = tab.id;
+                  return;
+                }
+                const clickIdx = filteredTabs.findIndex((t) => t.id === tab.id);
+                const start = Math.min(anchorIdx, clickIdx);
+                const end = Math.max(anchorIdx, clickIdx);
+                setSelectedTabs((prev) => {
+                  const next = new Set(prev);
+                  for (let i = start; i <= end; i++) {
+                    if (i === anchorIdx) continue;
+                    const id = filteredTabs[i].id;
+                    if (next.has(id)) next.delete(id);
+                    else next.add(id);
+                  }
+                  return next;
+                });
+              }
+            }}
           >
             <label
               className="relative -m-2 flex shrink-0 cursor-pointer items-center justify-center p-2"
@@ -493,14 +567,14 @@ function App() {
                 data-tab-title
                 className="truncate text-[13px] font-medium leading-tight text-on-surface"
               >
-                {tab.title || tab.url}
+                <Highlight text={tab.title || tab.url || ""} term={filter} />
               </div>
               {tab.url && (
                 <div
                   data-tab-url
                   className="mt-0.5 truncate text-[11px] leading-tight text-muted"
                 >
-                  {tab.url}
+                  <Highlight text={tab.url} term={filter} />
                 </div>
               )}
             </div>
@@ -522,7 +596,7 @@ function App() {
                   tab={tab}
                   onClose={() => setMenuTabId(null)}
                   onCopied={handleCopied}
-                  onFilterDomain={setFilter}
+                  onFilterDomain={updateFilter}
                 />
               )}
             </div>

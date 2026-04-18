@@ -26,6 +26,7 @@ body,
   --color-accent: light-dark(#3b82f6, #60a5fa);
   --color-accent-subtle: light-dark(#eff6ff, #1a2332);
   --color-hover: color-mix(in srgb, light-dark(#171717, #f5f5f5) 6%, transparent);
+  --color-highlight: light-dark(#fef08a, #854d0e);
   --color-danger: light-dark(#dc2626, #f87171);
   --color-danger-border: light-dark(#fca5a5, #991b1b);
 }
