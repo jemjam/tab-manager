@@ -416,9 +416,9 @@ function App() {
         </div>
       </div>
 
-      <ul className="flex flex-col">
+      <ul className="flex flex-col px-3 pb-3">
         {filter && filteredTabs.length === 0 && (
-          <li className="px-3 py-6 text-center text-xs text-muted">
+          <li className="py-6 text-center text-[11px] text-muted">
             No tabs matching &ldquo;{filter}&rdquo;
           </li>
         )}
