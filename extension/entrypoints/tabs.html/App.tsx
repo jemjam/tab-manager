@@ -380,6 +380,7 @@ function App() {
               <button
                 data-selected-count
                 data-clear-selected
+                aria-label="Clear selection"
                 className="cursor-pointer border-none bg-transparent p-0 text-[11px] text-accent hover:underline"
                 onClick={() => setSelectedTabs(new Set())}
               >
@@ -391,6 +392,7 @@ function App() {
                 data-bulk-menu-button
                 aria-label="Bulk actions"
                 className="flex size-6 cursor-pointer items-center justify-center rounded border-none bg-transparent text-base font-bold leading-none text-muted hover:bg-hover hover:text-on-surface"
+                onMouseDown={(e) => e.stopPropagation()}
                 onClick={() => setBulkMenuOpen((v) => !v)}
               >
                 ⋮
@@ -453,7 +455,7 @@ function App() {
                     : "hidden group-hover:block",
                 )}
                 checked={selectedTabs.has(tab.id)}
-                readOnly
+                onChange={() => {}}
               />
             </span>
             <div className="min-w-0 flex-1">
@@ -476,6 +478,7 @@ function App() {
               <button
                 data-tab-menu
                 className="flex size-6 cursor-pointer items-center justify-center rounded border-none bg-transparent text-base font-bold leading-none text-muted opacity-0 hover:bg-hover hover:text-on-surface group-hover:opacity-100"
+                onMouseDown={(e) => e.stopPropagation()}
                 onClick={(e) => {
                   e.stopPropagation();
                   setMenuTabId(menuTabId === tab.id ? null : tab.id);
