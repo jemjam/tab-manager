@@ -183,18 +183,21 @@ test("filter clear button appears and clears filter", async ({ context, page, ex
   await newPage.close();
 });
 
-test("bulk action bar always visible, disabled when nothing selected", async ({ page, extensionUrl }) => {
+test("bulk action bar always visible, menu items disabled when nothing selected", async ({ page, extensionUrl }) => {
   await page.goto(`${extensionUrl}/tabs.html`);
   await expect(page.locator("[data-tab]").first()).toBeVisible();
 
   // Bar is visible
   await expect(page.locator("[data-bulk-bar]")).toBeVisible();
 
-  // Buttons are disabled
+  // Selected count element is hidden when nothing selected
+  await expect(page.locator("[data-selected-count]")).not.toBeVisible();
+
+  // Open the bulk menu — items are disabled
+  await page.locator("[data-bulk-menu-button]").click();
+  await expect(page.locator("[data-bulk-menu]")).toBeVisible();
   await expect(page.locator("[data-copy-selected]")).toBeDisabled();
   await expect(page.locator("[data-close-selected]")).toBeDisabled();
-
-  await expect(page.locator("[data-selected-count]")).toHaveText("0 selected");
 });
 
 test("bulk action bar enables when tabs selected", async ({ context, page, extensionUrl }) => {
@@ -209,9 +212,11 @@ test("bulk action bar enables when tabs selected", async ({ context, page, exten
 
   await item.click();
 
+  await expect(page.locator("[data-selected-count]")).toHaveText("1 Selected");
+
+  await page.locator("[data-bulk-menu-button]").click();
   await expect(page.locator("[data-copy-selected]")).toBeEnabled();
   await expect(page.locator("[data-close-selected]")).toBeEnabled();
-  await expect(page.locator("[data-selected-count]")).toHaveText("1 selected");
 
   await newPage.close();
 });
@@ -227,10 +232,10 @@ test("clear selected deselects all tabs", async ({ context, page, extensionUrl }
   await expect(item).toBeVisible();
 
   await item.click();
-  await expect(page.locator("[data-selected-count]")).toHaveText("1 selected");
+  await expect(page.locator("[data-selected-count]")).toHaveText("1 Selected");
 
   await page.locator("[data-clear-selected]").click();
-  await expect(page.locator("[data-selected-count]")).toHaveText("0 selected");
+  await expect(page.locator("[data-selected-count]")).not.toBeVisible();
   await expect(item.locator("[data-tab-checkbox]")).not.toBeChecked();
 
   await newPage.close();
@@ -254,11 +259,14 @@ test("batch copy with selection sets data-copied attribute", async ({ context, p
   await page.locator("[data-tab]", { hasText: "Link A" }).click();
   await page.locator("[data-tab]", { hasText: "Link B" }).click();
 
+  await page.locator("[data-bulk-menu-button]").click();
   const copyBtn = page.locator("[data-copy-selected]");
   await expect(copyBtn).toBeEnabled();
   await copyBtn.click();
 
-  await expect(copyBtn).toHaveAttribute("data-copied", "true");
+  // Menu closes after copy; reopen to inspect copied state
+  await page.locator("[data-bulk-menu-button]").click();
+  await expect(page.locator("[data-copy-selected]")).toHaveAttribute("data-copied", "true");
 
   await pageA.close();
   await pageB.close();
@@ -287,10 +295,11 @@ test("selects and closes multiple tabs at once", async ({ context, page, extensi
   await page.locator("[data-tab]", { hasText: "Alpha" }).click();
   await page.locator("[data-tab]", { hasText: "Charlie" }).click();
 
-  await expect(page.locator("[data-selected-count]")).toHaveText("2 selected");
+  await expect(page.locator("[data-selected-count]")).toHaveText("2 Selected");
 
   const countBefore = await page.locator("[data-tab]").count();
 
+  await page.locator("[data-bulk-menu-button]").click();
   await page.locator("[data-close-selected]").click();
 
   await expect(page.locator("[data-tab]")).toHaveCount(countBefore - 2);
@@ -360,7 +369,7 @@ test("select all only affects filtered tabs", async ({ context, page, extensionU
 
   await page.locator("[data-select-all]").click();
 
-  await expect(page.locator("[data-selected-count]")).toHaveText("2 selected");
+  await expect(page.locator("[data-selected-count]")).toHaveText("2 Selected");
 
   await pageA.close();
   await pageB.close();

@@ -102,6 +102,62 @@ function ContextMenu({
   );
 }
 
+function BulkMenu({
+  onClose,
+  onCopy,
+  onCloseTabs,
+  copied,
+  disabled,
+}: {
+  onClose: () => void;
+  onCopy: () => void;
+  onCloseTabs: () => void;
+  copied: boolean;
+  disabled: boolean;
+}) {
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) onClose();
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [onClose]);
+
+  return (
+    <div
+      ref={ref}
+      data-bulk-menu
+      className="absolute right-0 top-full z-30 mt-1 min-w-[140px] rounded border border-border bg-surface py-1 shadow-lg"
+    >
+      <button
+        data-copy-selected
+        data-copied={copied ? "true" : undefined}
+        disabled={disabled}
+        className={clsx(
+          "w-full px-3 py-1.5 text-left text-xs",
+          disabled ? "cursor-default opacity-40" : "cursor-pointer hover:bg-hover",
+        )}
+        onClick={onCopy}
+      >
+        {copied ? "\u2713 Copied" : "Copy Links"}
+      </button>
+      <button
+        data-close-selected
+        disabled={disabled}
+        className={clsx(
+          "w-full px-3 py-1.5 text-left text-xs text-danger",
+          disabled ? "cursor-default opacity-40" : "cursor-pointer hover:bg-hover",
+        )}
+        onClick={onCloseTabs}
+      >
+        Close Selected
+      </button>
+    </div>
+  );
+}
+
 function App() {
   const [tabs, setTabs] = useState<Tab[]>([]);
   const [selectedTabs, setSelectedTabs] = useState<Set<number>>(new Set());
@@ -110,7 +166,9 @@ function App() {
   const copiedTabTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
   const [bulkCopied, triggerBulkCopied] = useCopied();
   const [menuTabId, setMenuTabId] = useState<number | null>(null);
+  const [bulkMenuOpen, setBulkMenuOpen] = useState(false);
   const filterRef = useRef<HTMLInputElement>(null);
+  const selectAllRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => () => clearTimeout(copiedTabTimer.current), []);
 
@@ -176,6 +234,14 @@ function App() {
   const allSelected =
     filteredTabs.length > 0 &&
     filteredTabs.every((t) => selectedTabs.has(t.id));
+  const someSelected = filteredTabs.some((t) => selectedTabs.has(t.id));
+  const indeterminate = someSelected && !allSelected;
+
+  useEffect(() => {
+    if (selectAllRef.current) {
+      selectAllRef.current.indeterminate = indeterminate;
+    }
+  }, [indeterminate]);
 
   const toggleAll = () => {
     if (allSelected) {
@@ -216,19 +282,12 @@ function App() {
 
   return (
     <>
-      <div className="sticky top-0 z-10 flex items-center gap-2 border-b border-border bg-surface px-3 py-2">
-        <input
-          type="checkbox"
-          checked={allSelected}
-          onChange={toggleAll}
-          data-select-all
-          className="shrink-0 cursor-pointer"
-        />
-        <div className="relative flex-1">
+      <div className="sticky top-0 z-10 border-b border-border bg-surface px-3 pb-2 pt-2">
+        <div className="relative">
           <input
             ref={filterRef}
             type="text"
-            placeholder="Filter tabs…  /"
+            placeholder="Filter terms"
             value={filter}
             onChange={(e) => setFilter(e.target.value)}
             data-filter
@@ -245,58 +304,62 @@ function App() {
             </button>
           )}
         </div>
-        <span
-          data-tab-count
-          className="shrink-0 text-xs text-muted"
-        >
-          {filteredTabs.length} tabs
-        </span>
-      </div>
 
-      <div
-        data-bulk-bar
-        className="sticky top-[37px] z-20 flex items-center gap-2 border-b border-border bg-surface px-3 py-2"
-      >
-        <span
-          data-selected-count
-          className="text-xs text-muted"
+        <div
+          data-bulk-bar
+          className="mt-2 flex items-center gap-2"
         >
-          {selectedTabs.size} selected
-        </span>
-        <button
-          data-clear-selected
-          disabled={!hasSelection}
-          className={clsx(
-            "flex-1 rounded border-none bg-transparent px-1 py-1 text-left text-xs",
-            hasSelection ? "cursor-pointer text-accent" : "cursor-default opacity-40",
+          <input
+            ref={selectAllRef}
+            type="checkbox"
+            checked={allSelected}
+            onChange={toggleAll}
+            data-select-all
+            className="shrink-0 cursor-pointer"
+          />
+          <span
+            data-tab-count
+            className="text-xs text-muted"
+          >
+            {filteredTabs.length} Tabs Visible
+          </span>
+          <div className="flex-1" />
+          {hasSelection && (
+            <button
+              data-selected-count
+              data-clear-selected
+              className="cursor-pointer border-none bg-transparent p-0 text-xs text-accent hover:underline"
+              onClick={() => setSelectedTabs(new Set())}
+            >
+              {selectedTabs.size} Selected
+            </button>
           )}
-          onClick={() => setSelectedTabs(new Set())}
-        >
-          Clear selected
-        </button>
-        <button
-          data-copy-selected
-          data-copied={bulkCopied ? "true" : undefined}
-          disabled={!hasSelection}
-          className={clsx(
-            "rounded border border-border bg-transparent px-2 py-1 text-xs",
-            hasSelection ? "cursor-pointer" : "cursor-default opacity-40",
-          )}
-          onClick={copySelected}
-        >
-          {bulkCopied ? "\u2713 Copied" : "Copy Links"}
-        </button>
-        <button
-          data-close-selected
-          disabled={!hasSelection}
-          className={clsx(
-            "rounded border border-danger-border bg-transparent px-2 py-1 text-xs text-danger",
-            hasSelection ? "cursor-pointer" : "cursor-default opacity-40",
-          )}
-          onClick={closeSelected}
-        >
-          Close Selected
-        </button>
+          <div className="relative shrink-0">
+            <button
+              data-bulk-menu-button
+              aria-label="Bulk actions"
+              className="flex size-5 cursor-pointer items-center justify-center rounded border-none bg-transparent text-sm opacity-60 hover:bg-hover hover:opacity-100"
+              onClick={() => setBulkMenuOpen((v) => !v)}
+            >
+              ⋮
+            </button>
+            {bulkMenuOpen && (
+              <BulkMenu
+                onClose={() => setBulkMenuOpen(false)}
+                onCopy={() => {
+                  copySelected();
+                  setBulkMenuOpen(false);
+                }}
+                onCloseTabs={() => {
+                  closeSelected();
+                  setBulkMenuOpen(false);
+                }}
+                copied={bulkCopied}
+                disabled={!hasSelection}
+              />
+            )}
+          </div>
+        </div>
       </div>
 
       <ul className="flex flex-col">
@@ -312,7 +375,8 @@ function App() {
             className={clsx(
               "group flex cursor-pointer items-center gap-2 border-b border-border px-3 py-2 hover:bg-hover",
               tab.active && "bg-accent-subtle",
-              selectedTabs.has(tab.id) && "bg-accent-subtler",
+              selectedTabs.has(tab.id) &&
+                "bg-accent-subtle shadow-[inset_3px_0_0_var(--color-accent)]",
             )}
             onClick={() => toggleSelect(tab.id)}
           >
