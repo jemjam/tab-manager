@@ -132,6 +132,7 @@ function ContextMenu({
     <div
       ref={ref}
       data-context-menu
+      onClick={(e) => e.stopPropagation()}
       className="absolute right-0 top-full z-30 mt-1 min-w-[140px] rounded border border-border bg-surface py-1 shadow-lg"
     >
       <button
@@ -244,6 +245,12 @@ function App() {
   const selectAllRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => () => clearTimeout(copiedTabTimer.current), []);
+
+  const focusTab = (tab: Tab) => {
+    browser.tabs.update(tab.id, { active: true });
+    if (tab.windowId != null)
+      browser.windows.update(tab.windowId, { focused: true });
+  };
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -447,14 +454,18 @@ function App() {
             key={tab.id}
             data-tab
             className={clsx(
-              "group flex min-h-16 cursor-pointer items-center gap-3 border-b border-border px-3 py-3 hover:bg-hover",
+              "group flex min-h-16 items-center gap-3 border-b border-border px-3 py-3 hover:bg-hover",
               tab.active && "bg-accent-subtle",
               selectedTabs.has(tab.id) &&
                 "bg-accent-subtle shadow-[inset_3px_0_0_var(--color-accent)]",
             )}
-            onClick={() => toggleSelect(tab.id)}
+            onDoubleClick={() => focusTab(tab)}
           >
-            <span className="relative flex size-4 shrink-0 items-center justify-center">
+            <label
+              className="relative -m-2 flex shrink-0 cursor-pointer items-center justify-center p-2"
+              onClick={(e) => e.stopPropagation()}
+              onDoubleClick={(e) => e.stopPropagation()}
+            >
               <Favicon
                 tab={tab}
                 className={clsx(
@@ -474,9 +485,9 @@ function App() {
                     : "hidden group-hover:block",
                 )}
                 checked={selectedTabs.has(tab.id)}
-                onChange={() => {}}
+                onChange={() => toggleSelect(tab.id)}
               />
-            </span>
+            </label>
             <div className="min-w-0 flex-1">
               <div
                 data-tab-title
