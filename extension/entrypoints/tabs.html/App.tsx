@@ -336,82 +336,81 @@ function App() {
 
   return (
     <>
-      <div className="sticky top-0 z-10 border-b border-border bg-surface px-3 pb-2 pt-3">
-        <div className="relative">
-          <input
-            ref={filterRef}
-            type="text"
-            placeholder="Filter terms"
-            value={filter}
-            onChange={(e) => setFilter(e.target.value)}
-            data-filter
-            className="h-7 w-full rounded-[3px] border border-input-border bg-transparent px-2 pr-6 text-[11px] leading-none outline-none placeholder:text-muted focus:border-accent"
-          />
-          {filter && (
-            <button
-              data-filter-clear
-              className="absolute right-1 top-1/2 flex size-4 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full border-none bg-transparent text-xs text-muted hover:text-on-surface"
-              onClick={() => setFilter("")}
-              aria-label="Clear filter"
-            >
-              ×
-            </button>
-          )}
-        </div>
-
-        <div
-          data-bulk-bar
-          className="mt-2 flex h-6 items-center gap-2"
-        >
-          <input
-            ref={selectAllRef}
-            type="checkbox"
-            checked={allSelected}
-            onChange={toggleAll}
-            data-select-all
-            className="size-4 shrink-0 cursor-pointer accent-accent"
-          />
-          <span
-            data-tab-count
-            className="text-[11px] text-muted"
-          >
-            {filteredTabs.length} Tabs Visible
-          </span>
-          <div className="flex-1" />
-          {hasSelection && (
-            <button
-              data-selected-count
-              data-clear-selected
-              className="cursor-pointer border-none bg-transparent p-0 text-[11px] text-accent hover:underline"
-              onClick={() => setSelectedTabs(new Set())}
-            >
-              {selectedTabs.size} Selected
-            </button>
-          )}
-          <div className="relative shrink-0">
-            <button
-              data-bulk-menu-button
-              aria-label="Bulk actions"
-              className="flex size-6 cursor-pointer items-center justify-center rounded border-none bg-transparent text-base font-bold leading-none text-muted hover:bg-hover hover:text-on-surface"
-              onClick={() => setBulkMenuOpen((v) => !v)}
-            >
-              ⋮
-            </button>
-            {bulkMenuOpen && (
-              <BulkMenu
-                onClose={() => setBulkMenuOpen(false)}
-                onCopy={() => {
-                  copySelected();
-                  setBulkMenuOpen(false);
-                }}
-                onCloseTabs={() => {
-                  closeSelected();
-                  setBulkMenuOpen(false);
-                }}
-                copied={bulkCopied}
-                disabled={!hasSelection}
-              />
+      <div className="sticky top-0 z-10 bg-surface px-3">
+        <div className="border-b border-border px-3 pb-2 pt-3">
+          <div className="relative">
+            <input
+              ref={filterRef}
+              type="text"
+              placeholder="Filter terms"
+              value={filter}
+              onChange={(e) => setFilter(e.target.value)}
+              data-filter
+              className="h-7 w-full rounded-[3px] border border-input-border bg-transparent px-2 pr-6 text-[11px] leading-none outline-none placeholder:text-muted focus:border-accent"
+            />
+            {filter && (
+              <button
+                data-filter-clear
+                className="absolute right-1 top-1/2 flex size-4 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full border-none bg-transparent text-xs text-muted hover:text-on-surface"
+                onClick={() => setFilter("")}
+                aria-label="Clear filter"
+              >
+                ×
+              </button>
             )}
+          </div>
+
+          <div
+            data-bulk-bar
+            className="mt-2 flex h-6 items-center gap-2"
+          >
+            <input
+              ref={selectAllRef}
+              type="checkbox"
+              checked={allSelected}
+              onChange={toggleAll}
+              data-select-all
+              className="size-4 shrink-0 cursor-pointer accent-accent"
+            />
+            <span data-tab-count className="text-[11px] text-muted">
+              {filteredTabs.length} Tabs Visible
+            </span>
+            <div className="flex-1" />
+            {hasSelection && (
+              <button
+                data-selected-count
+                data-clear-selected
+                className="cursor-pointer border-none bg-transparent p-0 text-[11px] text-accent hover:underline"
+                onClick={() => setSelectedTabs(new Set())}
+              >
+                {selectedTabs.size} Selected
+              </button>
+            )}
+            <div className="relative shrink-0">
+              <button
+                data-bulk-menu-button
+                aria-label="Bulk actions"
+                className="flex size-6 cursor-pointer items-center justify-center rounded border-none bg-transparent text-base font-bold leading-none text-muted hover:bg-hover hover:text-on-surface"
+                onClick={() => setBulkMenuOpen((v) => !v)}
+              >
+                ⋮
+              </button>
+              {bulkMenuOpen && (
+                <BulkMenu
+                  onClose={() => setBulkMenuOpen(false)}
+                  onCopy={() => {
+                    copySelected();
+                    setBulkMenuOpen(false);
+                  }}
+                  onCloseTabs={() => {
+                    closeSelected();
+                    setBulkMenuOpen(false);
+                  }}
+                  copied={bulkCopied}
+                  disabled={!hasSelection}
+                />
+              )}
+            </div>
           </div>
         </div>
       </div>
