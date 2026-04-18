@@ -4,6 +4,19 @@
   color-scheme: light dark;
 }
 
+html,
+body,
+#root {
+  height: 100%;
+}
+
+#root {
+  display: flex;
+  flex-direction: column;
+  padding: calc(var(--spacing) * 3);
+  background-color: var(--color-surface);
+}
+
 @theme {
   --color-surface: light-dark(#ffffff, #171717);
   --color-on-surface: light-dark(#171717, #f5f5f5);

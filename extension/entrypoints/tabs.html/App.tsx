@@ -80,10 +80,12 @@ function ContextMenu({
   tab,
   onClose,
   onCopied,
+  onFilterDomain,
 }: {
   tab: Tab;
   onClose: () => void;
   onCopied: (tabId: number) => void;
+  onFilterDomain: (domain: string) => void;
 }) {
   const ref = useRef<HTMLDivElement>(null);
 
@@ -112,6 +114,14 @@ function ContextMenu({
     browser.tabs.duplicate(tab.id);
     onClose();
   };
+
+  const filterDomain = () => {
+    const host = tabHost(tab);
+    if (host) onFilterDomain(host);
+    onClose();
+  };
+
+  const host = tabHost(tab);
 
   const closeTab = () => {
     browser.tabs.remove(tab.id).catch(() => {});
@@ -145,6 +155,15 @@ function ContextMenu({
       >
         Duplicate tab
       </button>
+      {host && (
+        <button
+          data-menu-filter-domain
+          className="w-full cursor-pointer px-3 py-1.5 text-left text-[11px] hover:bg-hover"
+          onClick={filterDomain}
+        >
+          Filter on this domain
+        </button>
+      )}
       <button
         data-menu-close
         className="w-full cursor-pointer px-3 py-1.5 text-left text-[11px] text-danger hover:bg-hover"
@@ -336,8 +355,8 @@ function App() {
 
   return (
     <>
-      <div className="sticky top-0 z-10 bg-surface px-3">
-        <div className="border-b border-border px-3 pb-2 pt-3">
+      <div className="shrink-0 bg-surface">
+        <div className="px-3 pb-2 pt-1">
           <div className="relative">
             <input
               ref={filterRef}
@@ -351,7 +370,7 @@ function App() {
             {filter && (
               <button
                 data-filter-clear
-                className="absolute right-1 top-1/2 flex size-4 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full border-none bg-transparent text-xs text-muted hover:text-on-surface"
+                className="absolute right-1 top-1/2 flex size-5 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full border-none bg-transparent text-base text-danger hover:text-danger"
                 onClick={() => setFilter("")}
                 aria-label="Clear filter"
               >
@@ -417,7 +436,7 @@ function App() {
         </div>
       </div>
 
-      <ul className="flex flex-col px-3 pb-3">
+      <ul className="flex flex-1 flex-col overflow-y-auto rounded-md border border-border">
         {filter && filteredTabs.length === 0 && (
           <li className="py-6 text-center text-[11px] text-muted">
             No tabs matching &ldquo;{filter}&rdquo;
@@ -492,6 +511,7 @@ function App() {
                   tab={tab}
                   onClose={() => setMenuTabId(null)}
                   onCopied={handleCopied}
+                  onFilterDomain={setFilter}
                 />
               )}
             </div>
