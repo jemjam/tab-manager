@@ -383,3 +383,95 @@ test("select all only affects filtered tabs", async ({ context, page, extensionU
   await pageB.close();
   await pageC.close();
 });
+
+test("tab key focuses checkbox in row", async ({ context, page, extensionUrl }) => {
+  const newPage = await context.newPage();
+  await newPage.goto("data:text/html,<title>Tab Focus Test</title>");
+  await newPage.waitForLoadState("domcontentloaded");
+
+  await page.goto(`${extensionUrl}/tabs.html`);
+  await expect(page.locator("[data-tab]").first()).toBeVisible();
+
+  // Focus the filter first, then tab through to reach row checkboxes
+  await page.locator("[data-filter]").focus();
+
+  // Tab past the filter clear (if any), select-all, then into the first row checkbox
+  // Keep pressing Tab until a [data-tab-checkbox] receives focus
+  for (let i = 0; i < 10; i++) {
+    await page.keyboard.press("Tab");
+    const focused = page.locator("[data-tab-checkbox]:focus");
+    if (await focused.count() > 0) break;
+  }
+
+  await expect(page.locator("[data-tab-checkbox]:focus")).toHaveCount(1);
+
+  await newPage.close();
+});
+
+test("checkbox and menu button visible when row has focus", async ({ context, page, extensionUrl }) => {
+  const newPage = await context.newPage();
+  await newPage.goto("data:text/html,<title>Focus Visible Test</title>");
+  await newPage.waitForLoadState("domcontentloaded");
+
+  await page.goto(`${extensionUrl}/tabs.html`);
+
+  const item = page.locator("[data-tab]", { hasText: "Focus Visible Test" });
+  await expect(item).toBeVisible();
+
+  // Focus the checkbox via keyboard
+  const checkbox = item.locator("[data-tab-checkbox]");
+  await checkbox.focus();
+
+  // Checkbox should be visible (opacity-100)
+  await expect(checkbox).toHaveCSS("opacity", "1");
+
+  // Menu button should also be visible
+  const menuBtn = item.locator("[data-tab-menu]");
+  await expect(menuBtn).toHaveCSS("opacity", "1");
+
+  await newPage.close();
+});
+
+test("context menu traps focus and closes on escape", async ({ context, page, extensionUrl }) => {
+  const newPage = await context.newPage();
+  await newPage.goto("data:text/html,<title>Focus Trap Test</title>");
+  await newPage.waitForLoadState("domcontentloaded");
+
+  await page.goto(`${extensionUrl}/tabs.html`);
+
+  const item = page.locator("[data-tab]", { hasText: "Focus Trap Test" });
+  await expect(item).toBeVisible();
+
+  // Open context menu
+  await item.hover();
+  await item.locator("[data-tab-menu]").click();
+  const menu = item.locator("[data-context-menu]");
+  await expect(menu).toBeVisible();
+
+  // First menu item should be auto-focused
+  const focusBtn = item.locator("[data-menu-focus]");
+  await expect(focusBtn).toBeFocused();
+
+  // Tab through all items — should cycle back to first
+  const closeBtn = item.locator("[data-menu-close]");
+  await page.keyboard.press("Tab");
+  await page.keyboard.press("Tab");
+  await page.keyboard.press("Tab");
+  // After 3 tabs: copy -> duplicate -> close (no filter-domain for data: URLs)
+  await expect(closeBtn).toBeFocused();
+
+  // One more Tab should wrap to first item
+  await page.keyboard.press("Tab");
+  await expect(focusBtn).toBeFocused();
+
+  // Shift+Tab should wrap to last item
+  await page.keyboard.press("Shift+Tab");
+  await expect(closeBtn).toBeFocused();
+
+  // Escape closes the menu and returns focus to the trigger button
+  await page.keyboard.press("Escape");
+  await expect(menu).not.toBeVisible();
+  await expect(item.locator("[data-tab-menu]")).toBeFocused();
+
+  await newPage.close();
+});

@@ -95,13 +95,52 @@ function useCopied(): [boolean, () => void] {
   return [copied, trigger];
 }
 
+function useFocusTrap(
+  ref: React.RefObject<HTMLElement | null>,
+  triggerRef: React.RefObject<HTMLElement | null>,
+  onClose: () => void,
+) {
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const buttons = el.querySelectorAll<HTMLElement>("button:not([disabled])");
+    if (buttons.length) buttons[0].focus();
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        e.preventDefault();
+        triggerRef.current?.focus();
+        onCloseRef.current();
+        return;
+      }
+      if (e.key !== "Tab" || !buttons.length) return;
+      const first = buttons[0];
+      const last = buttons[buttons.length - 1];
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault();
+        first.focus();
+      }
+    };
+    el.addEventListener("keydown", handleKeyDown);
+    return () => el.removeEventListener("keydown", handleKeyDown);
+  }, [ref, triggerRef]);
+}
+
 function ContextMenu({
   tab,
+  triggerRef,
   onClose,
   onCopied,
   onFilterDomain,
 }: {
   tab: Tab;
+  triggerRef: React.RefObject<HTMLElement | null>;
   onClose: () => void;
   onCopied: (tabId: number) => void;
   onFilterDomain: (domain: string) => void;
@@ -115,6 +154,8 @@ function ContextMenu({
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
   }, [onClose]);
+
+  useFocusTrap(ref, triggerRef, onClose);
 
   const focusTab = () => {
     browser.tabs.update(tab.id, { active: true });
@@ -150,43 +191,49 @@ function ContextMenu({
   return (
     <div
       ref={ref}
+      role="menu"
       data-context-menu
       onClick={(e) => e.stopPropagation()}
       className="absolute right-0 top-full z-30 mt-1 min-w-[140px] rounded border border-border bg-surface py-1 shadow-lg"
     >
       <button
+        role="menuitem"
         data-menu-focus
-        className="w-full cursor-pointer px-3 py-1.5 text-left text-[11px] hover:bg-hover"
+        className="w-full cursor-pointer px-3 py-1.5 text-left text-[11px] hover:bg-hover focus:bg-hover focus:outline-none"
         onClick={focusTab}
       >
         Focus tab
       </button>
       <button
+        role="menuitem"
         data-menu-copy
-        className="w-full cursor-pointer px-3 py-1.5 text-left text-[11px] hover:bg-hover"
+        className="w-full cursor-pointer px-3 py-1.5 text-left text-[11px] hover:bg-hover focus:bg-hover focus:outline-none"
         onClick={copyLink}
       >
         Copy link
       </button>
       <button
+        role="menuitem"
         data-menu-duplicate
-        className="w-full cursor-pointer px-3 py-1.5 text-left text-[11px] hover:bg-hover"
+        className="w-full cursor-pointer px-3 py-1.5 text-left text-[11px] hover:bg-hover focus:bg-hover focus:outline-none"
         onClick={duplicateTab}
       >
         Duplicate tab
       </button>
       {host && (
         <button
+          role="menuitem"
           data-menu-filter-domain
-          className="w-full cursor-pointer px-3 py-1.5 text-left text-[11px] hover:bg-hover"
+          className="w-full cursor-pointer px-3 py-1.5 text-left text-[11px] hover:bg-hover focus:bg-hover focus:outline-none"
           onClick={filterDomain}
         >
           Filter on this domain
         </button>
       )}
       <button
+        role="menuitem"
         data-menu-close
-        className="w-full cursor-pointer px-3 py-1.5 text-left text-[11px] text-danger hover:bg-hover"
+        className="w-full cursor-pointer px-3 py-1.5 text-left text-[11px] text-danger hover:bg-hover focus:bg-hover focus:outline-none"
         onClick={closeTab}
       >
         Close tab
@@ -196,12 +243,14 @@ function ContextMenu({
 }
 
 function BulkMenu({
+  triggerRef,
   onClose,
   onCopy,
   onCloseTabs,
   copied,
   disabled,
 }: {
+  triggerRef: React.RefObject<HTMLElement | null>;
   onClose: () => void;
   onCopy: () => void;
   onCloseTabs: () => void;
@@ -218,30 +267,35 @@ function BulkMenu({
     return () => document.removeEventListener("mousedown", handler);
   }, [onClose]);
 
+  useFocusTrap(ref, triggerRef, onClose);
+
   return (
     <div
       ref={ref}
+      role="menu"
       data-bulk-menu
       className="absolute right-0 top-full z-30 mt-1 min-w-[140px] rounded border border-border bg-surface py-1 shadow-lg"
     >
       <button
+        role="menuitem"
         data-copy-selected
         data-copied={copied ? "true" : undefined}
         disabled={disabled}
         className={clsx(
           "w-full px-3 py-1.5 text-left text-[11px]",
-          disabled ? "cursor-default opacity-40" : "cursor-pointer hover:bg-hover",
+          disabled ? "cursor-default opacity-40" : "cursor-pointer hover:bg-hover focus:bg-hover focus:outline-none",
         )}
         onClick={onCopy}
       >
         {copied ? "\u2713 Copied" : "Copy Links"}
       </button>
       <button
+        role="menuitem"
         data-close-selected
         disabled={disabled}
         className={clsx(
           "w-full px-3 py-1.5 text-left text-[11px] text-danger",
-          disabled ? "cursor-default opacity-40" : "cursor-pointer hover:bg-hover",
+          disabled ? "cursor-default opacity-40" : "cursor-pointer hover:bg-hover focus:bg-hover focus:outline-none",
         )}
         onClick={onCloseTabs}
       >
@@ -271,6 +325,8 @@ function App() {
   const filterRef = useRef<HTMLInputElement>(null);
   const selectAllRef = useRef<HTMLInputElement>(null);
   const selectionAnchor = useRef<number | null>(null);
+  const bulkMenuBtnRef = useRef<HTMLButtonElement>(null);
+  const tabMenuBtnRefs = useRef(new Map<number, HTMLButtonElement>());
 
   useEffect(() => () => clearTimeout(copiedTabTimer.current), []);
 
@@ -449,6 +505,7 @@ function App() {
             )}
             <div className="relative shrink-0">
               <button
+                ref={bulkMenuBtnRef}
                 data-bulk-menu-button
                 aria-label="Bulk actions"
                 disabled={!hasSelection}
@@ -465,6 +522,7 @@ function App() {
               </button>
               {bulkMenuOpen && (
                 <BulkMenu
+                  triggerRef={bulkMenuBtnRef}
                   onClose={() => setBulkMenuOpen(false)}
                   onCopy={() => {
                     copySelected();
@@ -535,7 +593,7 @@ function App() {
               }
             }}
           >
-            <label
+            <div
               className="relative -m-2 flex shrink-0 cursor-pointer items-center justify-center p-2"
               onClick={(e) => e.stopPropagation()}
               onDoubleClick={(e) => e.stopPropagation()}
@@ -545,23 +603,24 @@ function App() {
                 className={clsx(
                   "size-4",
                   selectedTabs.has(tab.id)
-                    ? "hidden"
-                    : "flex group-hover:hidden",
+                    ? "invisible"
+                    : "group-hover:invisible group-focus-within:invisible",
                 )}
               />
               <input
                 type="checkbox"
                 data-tab-checkbox
+                aria-label={`Select ${tab.title || tab.url}`}
                 className={clsx(
-                  "size-4 cursor-pointer accent-accent",
+                  "absolute size-4 cursor-pointer accent-accent",
                   selectedTabs.has(tab.id)
-                    ? "block"
-                    : "hidden group-hover:block",
+                    ? "opacity-100"
+                    : "opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 focus:opacity-100",
                 )}
                 checked={selectedTabs.has(tab.id)}
                 onChange={() => toggleSelect(tab.id)}
               />
-            </label>
+            </div>
             <div className="min-w-0 flex-1">
               <div
                 data-tab-title
@@ -580,8 +639,12 @@ function App() {
             </div>
             <div className="relative shrink-0">
               <button
+                ref={(el) => {
+                  if (el) tabMenuBtnRefs.current.set(tab.id, el);
+                  else tabMenuBtnRefs.current.delete(tab.id);
+                }}
                 data-tab-menu
-                className="flex size-6 cursor-pointer items-center justify-center rounded border-none bg-transparent text-base font-bold leading-none text-muted opacity-0 hover:bg-hover hover:text-on-surface group-hover:opacity-100"
+                className="flex size-6 cursor-pointer items-center justify-center rounded border-none bg-transparent text-base font-bold leading-none text-muted opacity-0 hover:bg-hover hover:text-on-surface focus:opacity-100 group-hover:opacity-100 group-focus-within:opacity-100"
                 onMouseDown={(e) => e.stopPropagation()}
                 onClick={(e) => {
                   e.stopPropagation();
@@ -594,6 +657,7 @@ function App() {
               {menuTabId === tab.id && (
                 <ContextMenu
                   tab={tab}
+                  triggerRef={{ current: tabMenuBtnRefs.current.get(tab.id) ?? null }}
                   onClose={() => setMenuTabId(null)}
                   onCopied={handleCopied}
                   onFilterDomain={updateFilter}
