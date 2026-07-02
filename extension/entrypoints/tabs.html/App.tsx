@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { browser, Browser } from "wxt/browser";
 import clsx from "clsx";
 
@@ -30,6 +30,14 @@ function tabColor(tab: Tab): string {
   const seed = tabHost(tab) || tab.title || String(tab.id);
   const hue = Math.abs(hashString(seed)) % 360;
   return `hsl(${hue} 55% 45%)`;
+}
+
+const MIN_FILTER_LENGTH = 3;
+
+function focusTab(tab: Tab) {
+  browser.tabs.update(tab.id, { active: true });
+  if (tab.windowId != null)
+    browser.windows.update(tab.windowId, { focused: true });
 }
 
 function Favicon({ tab, className }: { tab: Tab; className?: string }) {
@@ -68,7 +76,8 @@ function Highlight({ text, term }: { text: string; term: string }) {
   return (
     <>
       {parts.map((part, i) =>
-        part.toLowerCase() === term.toLowerCase() ? (
+        // odd indices are the captured matches from the split regex
+        i % 2 === 1 ? (
           <mark key={i} className="bg-highlight text-inherit">
             {part}
           </mark>
@@ -305,6 +314,114 @@ function BulkMenu({
   );
 }
 
+const TabRow = memo(function TabRow({
+  tab,
+  term,
+  selected,
+  menuOpen,
+  onRowClick,
+  onToggleSelect,
+  onMenuToggle,
+  onMenuClose,
+  onCopied,
+  onFilterDomain,
+}: {
+  tab: Tab;
+  term: string;
+  selected: boolean;
+  menuOpen: boolean;
+  onRowClick: (e: React.MouseEvent, tab: Tab) => void;
+  onToggleSelect: (tabId: number) => void;
+  onMenuToggle: (tabId: number) => void;
+  onMenuClose: () => void;
+  onCopied: (tabId: number) => void;
+  onFilterDomain: (domain: string) => void;
+}) {
+  const menuBtnRef = useRef<HTMLButtonElement>(null);
+
+  return (
+    <li
+      data-tab
+      className={clsx(
+        "group flex min-h-16 items-center gap-3 border-b border-border px-3 py-3 hover:bg-hover",
+        tab.active && "bg-accent-subtle",
+        selected && "bg-accent-subtle shadow-[inset_3px_0_0_var(--color-accent)]",
+      )}
+      onDoubleClick={() => focusTab(tab)}
+      onClick={(e) => onRowClick(e, tab)}
+    >
+      <div
+        className="relative -m-2 flex shrink-0 cursor-pointer items-center justify-center p-2"
+        onClick={(e) => e.stopPropagation()}
+        onDoubleClick={(e) => e.stopPropagation()}
+      >
+        <Favicon
+          tab={tab}
+          className={clsx(
+            "size-4",
+            selected
+              ? "invisible"
+              : "group-hover:invisible group-focus-within:invisible",
+          )}
+        />
+        <input
+          type="checkbox"
+          data-tab-checkbox
+          aria-label={`Select ${tab.title || tab.url}`}
+          className={clsx(
+            "absolute size-4 cursor-pointer accent-accent",
+            selected
+              ? "opacity-100"
+              : "opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 focus:opacity-100",
+          )}
+          checked={selected}
+          onChange={() => onToggleSelect(tab.id)}
+        />
+      </div>
+      <div className="min-w-0 flex-1">
+        <div
+          data-tab-title
+          className="truncate text-[13px] font-medium leading-tight text-on-surface"
+        >
+          <Highlight text={tab.title || tab.url || ""} term={term} />
+        </div>
+        {tab.url && (
+          <div
+            data-tab-url
+            className="mt-0.5 truncate text-[11px] leading-tight text-muted"
+          >
+            <Highlight text={tab.url} term={term} />
+          </div>
+        )}
+      </div>
+      <div className="relative shrink-0">
+        <button
+          ref={menuBtnRef}
+          data-tab-menu
+          className="flex size-6 cursor-pointer items-center justify-center rounded border-none bg-transparent text-base font-bold leading-none text-muted opacity-0 hover:bg-hover hover:text-on-surface focus:opacity-100 group-hover:opacity-100 group-focus-within:opacity-100"
+          onMouseDown={(e) => e.stopPropagation()}
+          onClick={(e) => {
+            e.stopPropagation();
+            onMenuToggle(tab.id);
+          }}
+          aria-label={`Actions for ${tab.title}`}
+        >
+          ⋮
+        </button>
+        {menuOpen && (
+          <ContextMenu
+            tab={tab}
+            triggerRef={menuBtnRef}
+            onClose={onMenuClose}
+            onCopied={onCopied}
+            onFilterDomain={onFilterDomain}
+          />
+        )}
+      </div>
+    </li>
+  );
+});
+
 function App() {
   const [tabs, setTabs] = useState<Tab[]>([]);
   const [selectedTabs, setSelectedTabs] = useState<Set<number>>(new Set());
@@ -326,15 +443,8 @@ function App() {
   const selectAllRef = useRef<HTMLInputElement>(null);
   const selectionAnchor = useRef<number | null>(null);
   const bulkMenuBtnRef = useRef<HTMLButtonElement>(null);
-  const tabMenuBtnRefs = useRef(new Map<number, HTMLButtonElement>());
 
   useEffect(() => () => clearTimeout(copiedTabTimer.current), []);
-
-  const focusTab = (tab: Tab) => {
-    browser.tabs.update(tab.id, { active: true });
-    if (tab.windowId != null)
-      browser.windows.update(tab.windowId, { focused: true });
-  };
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -364,36 +474,90 @@ function App() {
       });
     };
 
+    // onUpdated fires repeatedly while pages load (status, title, favicon);
+    // coalesce those bursts into a single refresh
+    let updateTimer: ReturnType<typeof setTimeout> | undefined;
+    const debouncedRefresh = () => {
+      clearTimeout(updateTimer);
+      updateTimer = setTimeout(refresh, 200);
+    };
+
     refresh();
 
     browser.tabs.onCreated.addListener(refresh);
     browser.tabs.onRemoved.addListener(refresh);
-    browser.tabs.onUpdated.addListener(refresh);
+    browser.tabs.onUpdated.addListener(debouncedRefresh);
 
     return () => {
+      clearTimeout(updateTimer);
       browser.tabs.onCreated.removeListener(refresh);
       browser.tabs.onRemoved.removeListener(refresh);
-      browser.tabs.onUpdated.removeListener(refresh);
+      browser.tabs.onUpdated.removeListener(debouncedRefresh);
     };
   }, []);
 
-  const filteredTabs = tabs.filter((tab) => {
-    if (!filter) return true;
-    const q = filter.toLowerCase();
-    return (
-      tab.title?.toLowerCase().includes(q) ||
-      tab.url?.toLowerCase().includes(q)
-    );
-  });
+  const activeFilter = filter.length >= MIN_FILTER_LENGTH ? filter : "";
 
-  const toggleSelect = (tabId: number) => {
+  const filteredTabs = useMemo(() => {
+    if (!activeFilter) return tabs;
+    const q = activeFilter.toLowerCase();
+    return tabs.filter(
+      (tab) =>
+        tab.title?.toLowerCase().includes(q) ||
+        tab.url?.toLowerCase().includes(q),
+    );
+  }, [tabs, activeFilter]);
+
+  const toggleSelect = useCallback((tabId: number) => {
     setSelectedTabs((prev) => {
       const next = new Set(prev);
       if (next.has(tabId)) next.delete(tabId);
       else next.add(tabId);
       return next;
     });
-  };
+  }, []);
+
+  const handleRowClick = useCallback(
+    (e: React.MouseEvent, tab: Tab) => {
+      if (e.ctrlKey || e.metaKey) {
+        e.preventDefault();
+        toggleSelect(tab.id);
+        selectionAnchor.current = tab.id;
+      } else if (e.shiftKey) {
+        e.preventDefault();
+        const anchorId = selectionAnchor.current;
+        const anchorIdx =
+          anchorId == null
+            ? -1
+            : filteredTabs.findIndex((t) => t.id === anchorId);
+        if (anchorIdx === -1) {
+          toggleSelect(tab.id);
+          selectionAnchor.current = tab.id;
+          return;
+        }
+        const clickIdx = filteredTabs.findIndex((t) => t.id === tab.id);
+        const start = Math.min(anchorIdx, clickIdx);
+        const end = Math.max(anchorIdx, clickIdx);
+        setSelectedTabs((prev) => {
+          const next = new Set(prev);
+          for (let i = start; i <= end; i++) {
+            if (i === anchorIdx) continue;
+            const id = filteredTabs[i].id;
+            if (next.has(id)) next.delete(id);
+            else next.add(id);
+          }
+          return next;
+        });
+      }
+    },
+    [filteredTabs, toggleSelect],
+  );
+
+  const handleMenuToggle = useCallback((tabId: number) => {
+    setMenuTabId((prev) => (prev === tabId ? null : tabId));
+  }, []);
+
+  const closeMenu = useCallback(() => setMenuTabId(null), []);
 
   const allSelected =
     filteredTabs.length > 0 &&
@@ -426,11 +590,11 @@ function App() {
 
   const toMarkdownLink = (tab: Tab) => `[${tab.title}](${tab.url})`;
 
-  const handleCopied = (tabId: number) => {
+  const handleCopied = useCallback((tabId: number) => {
     setCopiedTabId(tabId);
     clearTimeout(copiedTabTimer.current);
     copiedTabTimer.current = setTimeout(() => setCopiedTabId(null), 1000);
-  };
+  }, []);
 
   const copySelected = async () => {
     const selected = tabs.filter((t) => selectedTabs.has(t.id));
@@ -458,7 +622,7 @@ function App() {
               data-filter
               className="h-7 w-full rounded-[3px] border border-input-border bg-transparent px-2 pr-6 text-[11px] leading-none outline-none placeholder:text-muted focus:border-accent"
             />
-            {filter && (
+            {filterInput && (
               <button
                 data-filter-clear
                 className="absolute right-1 top-1/2 flex size-5 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full border-none bg-transparent text-base text-danger hover:text-danger"
@@ -483,7 +647,7 @@ function App() {
               className="size-4 shrink-0 cursor-pointer accent-accent"
             />
             <span data-tab-count className="text-[11px] text-muted">
-              {filter
+              {activeFilter
                 ? `${filteredTabs.length} of ${tabs.length} tabs`
                 : `All ${tabs.length} tabs`}
             </span>
@@ -542,129 +706,25 @@ function App() {
       </div>
 
       <ul className="flex flex-1 flex-col overflow-y-auto rounded-md border border-border">
-        {filter && filteredTabs.length === 0 && (
+        {activeFilter && filteredTabs.length === 0 && (
           <li className="py-6 text-center text-[11px] text-muted">
-            No tabs matching &ldquo;{filter}&rdquo;
+            No tabs matching &ldquo;{activeFilter}&rdquo;
           </li>
         )}
         {filteredTabs.map((tab) => (
-          <li
+          <TabRow
             key={tab.id}
-            data-tab
-            className={clsx(
-              "group flex min-h-16 items-center gap-3 border-b border-border px-3 py-3 hover:bg-hover",
-              tab.active && "bg-accent-subtle",
-              selectedTabs.has(tab.id) &&
-                "bg-accent-subtle shadow-[inset_3px_0_0_var(--color-accent)]",
-            )}
-            onDoubleClick={() => focusTab(tab)}
-            onClick={(e) => {
-              if (e.ctrlKey || e.metaKey) {
-                e.preventDefault();
-                toggleSelect(tab.id);
-                selectionAnchor.current = tab.id;
-              } else if (e.shiftKey) {
-                e.preventDefault();
-                const anchorId = selectionAnchor.current;
-                if (anchorId == null) {
-                  toggleSelect(tab.id);
-                  selectionAnchor.current = tab.id;
-                  return;
-                }
-                const anchorIdx = filteredTabs.findIndex((t) => t.id === anchorId);
-                if (anchorIdx === -1) {
-                  toggleSelect(tab.id);
-                  selectionAnchor.current = tab.id;
-                  return;
-                }
-                const clickIdx = filteredTabs.findIndex((t) => t.id === tab.id);
-                const start = Math.min(anchorIdx, clickIdx);
-                const end = Math.max(anchorIdx, clickIdx);
-                setSelectedTabs((prev) => {
-                  const next = new Set(prev);
-                  for (let i = start; i <= end; i++) {
-                    if (i === anchorIdx) continue;
-                    const id = filteredTabs[i].id;
-                    if (next.has(id)) next.delete(id);
-                    else next.add(id);
-                  }
-                  return next;
-                });
-              }
-            }}
-          >
-            <div
-              className="relative -m-2 flex shrink-0 cursor-pointer items-center justify-center p-2"
-              onClick={(e) => e.stopPropagation()}
-              onDoubleClick={(e) => e.stopPropagation()}
-            >
-              <Favicon
-                tab={tab}
-                className={clsx(
-                  "size-4",
-                  selectedTabs.has(tab.id)
-                    ? "invisible"
-                    : "group-hover:invisible group-focus-within:invisible",
-                )}
-              />
-              <input
-                type="checkbox"
-                data-tab-checkbox
-                aria-label={`Select ${tab.title || tab.url}`}
-                className={clsx(
-                  "absolute size-4 cursor-pointer accent-accent",
-                  selectedTabs.has(tab.id)
-                    ? "opacity-100"
-                    : "opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 focus:opacity-100",
-                )}
-                checked={selectedTabs.has(tab.id)}
-                onChange={() => toggleSelect(tab.id)}
-              />
-            </div>
-            <div className="min-w-0 flex-1">
-              <div
-                data-tab-title
-                className="truncate text-[13px] font-medium leading-tight text-on-surface"
-              >
-                <Highlight text={tab.title || tab.url || ""} term={filter} />
-              </div>
-              {tab.url && (
-                <div
-                  data-tab-url
-                  className="mt-0.5 truncate text-[11px] leading-tight text-muted"
-                >
-                  <Highlight text={tab.url} term={filter} />
-                </div>
-              )}
-            </div>
-            <div className="relative shrink-0">
-              <button
-                ref={(el) => {
-                  if (el) tabMenuBtnRefs.current.set(tab.id, el);
-                  else tabMenuBtnRefs.current.delete(tab.id);
-                }}
-                data-tab-menu
-                className="flex size-6 cursor-pointer items-center justify-center rounded border-none bg-transparent text-base font-bold leading-none text-muted opacity-0 hover:bg-hover hover:text-on-surface focus:opacity-100 group-hover:opacity-100 group-focus-within:opacity-100"
-                onMouseDown={(e) => e.stopPropagation()}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setMenuTabId(menuTabId === tab.id ? null : tab.id);
-                }}
-                aria-label={`Actions for ${tab.title}`}
-              >
-                ⋮
-              </button>
-              {menuTabId === tab.id && (
-                <ContextMenu
-                  tab={tab}
-                  triggerRef={{ current: tabMenuBtnRefs.current.get(tab.id) ?? null }}
-                  onClose={() => setMenuTabId(null)}
-                  onCopied={handleCopied}
-                  onFilterDomain={updateFilter}
-                />
-              )}
-            </div>
-          </li>
+            tab={tab}
+            term={activeFilter}
+            selected={selectedTabs.has(tab.id)}
+            menuOpen={menuTabId === tab.id}
+            onRowClick={handleRowClick}
+            onToggleSelect={toggleSelect}
+            onMenuToggle={handleMenuToggle}
+            onMenuClose={closeMenu}
+            onCopied={handleCopied}
+            onFilterDomain={updateFilter}
+          />
         ))}
       </ul>
     </>
